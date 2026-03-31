@@ -16,8 +16,10 @@ const router = express.Router();
 // All routes here are protected and require admin role
 router.use(protect, authorize("admin"));
 
-// Get all users in the same school
-router.get("/users", getUsers);
+// // Get all users in the same school
+// router.get("/users", getUsers);
+// GET all users for the school
+router.get("/", protect, getUsers);
 
 // Create a new user in admin's school
 router.post("/users", createUser);

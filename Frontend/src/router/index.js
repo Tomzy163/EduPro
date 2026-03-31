@@ -31,15 +31,15 @@ const routes = [
 
   // 🧠 DASHBOARD ROUTES (FIXED PATH)
   {
-    path: "/dashboard", // ✅ FIXED
-    component: DashboardLayout,
-    children: [
-      { path: "admin", component: AdminDashboard },
-      { path: "teacher", component: TeacherDashboard },
-      { path: "student", component: StudentDashboard },
-      { path: "parent", component: ParentDashboard },
-    ],
-  },
+  path: "/dashboard",
+  component: DashboardLayout,
+  children: [
+    { path: "admin", component: AdminDashboard },
+    { path: "teacher", component: TeacherDashboard },
+    { path: "student", component: StudentDashboard },
+    { path: "parent", component: ParentDashboard },
+  ],
+}
 ];
 
 const router = createRouter({
@@ -57,10 +57,11 @@ router.beforeEach((to, from, next) => {
     return next("/");
   }
 
-  if (to.path === "/dashboard/admin" && user?.role !== "admin") return next("/");
-  if (to.path === "/dashboard/teacher" && user?.role !== "teacher") return next("/");
-  if (to.path === "/dashboard/student" && user?.role !== "student") return next("/");
-  if (to.path === "/dashboard/parent" && user?.role !== "parent") return next("/");
+  // After login, redirect based on role:
+if (user.role === "admin") router.push("/dashboard/admin");
+if (user.role === "teacher") router.push("/dashboard/teacher");
+if (user.role === "student") router.push("/dashboard/student");
+if (user.role === "parent") router.push("/dashboard/parent") 
 
   next();
 });
