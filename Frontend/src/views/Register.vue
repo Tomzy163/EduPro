@@ -40,12 +40,12 @@ const handleRegister = async () => {
 
     loading.value = true;
 
-    await register({
+    const res = await register({
       name: name.value,
       email: email.value,
       password: password.value,
-      school: schoolName.value,
-      role: "admin",
+      school: schoolName.value, // ✅ send school
+      role: "admin", // For first admin
     });
 
     success.value = "Admin account created successfully 🎉";
