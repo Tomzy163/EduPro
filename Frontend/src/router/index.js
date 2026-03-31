@@ -57,11 +57,17 @@ router.beforeEach((to, from, next) => {
     return next("/");
   }
 
-  // After login, redirect based on role:
-if (user.role === "admin") router.push("/dashboard/admin");
-if (user.role === "teacher") router.push("/dashboard/teacher");
-if (user.role === "student") router.push("/dashboard/student");
-if (user.role === "parent") router.push("/dashboard/parent") 
+  // Role-based protection
+  const roleMap = {
+    "/dashboard/admin": "admin",
+    "/dashboard/teacher": "teacher",
+    "/dashboard/student": "student",
+    "/dashboard/parent": "parent",
+  };
+
+  if (roleMap[to.path] && user?.role !== roleMap[to.path]) {
+    return next("/");
+  }
 
   next();
 });
