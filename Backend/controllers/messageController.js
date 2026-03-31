@@ -1,0 +1,80 @@
+// backend/controllers/messageController.js
+import Message from "../models/Message.js";
+import User from "../models/User.js";
+import { io, users } from "../server.js";
+
+// SEND MESSAGE (Admin)
+export const sendMessage = async (req, res) => {
+  try {
+    const { title, content, roleTarget } = req.body;
+
+    // Determine recipients
+    let recipients = [];
+    if (roleTarget === "all") {
+      recipients = await User.find({ school: req.user.school }).select("_id");
+    } else {
+      recipients = await User.find({ role: roleTarget, school: req.user.school }).select("_id");
+    }
+
+    // Create message in DB
+    const message = await Message.create({
+      title,
+      content,
+      sender: req.user.id,
+      recipients: recipients.map(u => u._id),
+      roleTarget,
+    });
+
+    // 🔔 Send real-time notifications
+    recipients.forEach(user => {
+      const found = users.find(u => u.userId.toString() === user._id.toString());
+      if (found) {
+        io.to(found.socketId).emit("newMessage", { title, content });
+      }
+    });
+
+    res.json(message);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// GET USER MESSAGES
+export const getMessages = async (req, res) => {
+  try {
+    const messages = await Message.find({
+      recipients: req.user.id,        // Only messages for this user
+      school: req.user.school,        // Only messages in same school
+    })
+      .populate("sender", "name email")
+      .sort({ createdAt: -1 });
+
+    res.json(messages);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// DELETE MESSAGE (Admin)
+export const deleteMessage = async (req, res) => {
+  try {
+    const message = await Message.findById(req.params.id);
+
+    if (!message) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+    // Optional: ensure admin can only delete messages from their school
+    if (message.school.toString() !== req.user.school.toString()) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    await message.remove();
+    res.json({ message: "Message deleted" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+};
