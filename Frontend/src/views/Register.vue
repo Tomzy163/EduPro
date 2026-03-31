@@ -39,6 +39,14 @@ const handleRegister = async () => {
     }
 
     loading.value = true;
+          console.log("Sending:", {
+        name: name.value,
+        email: email.value,
+        password: password.value,
+        school: schoolName.value,
+      });
+    error.value = "";
+    if (!schoolName.value) return alert("Enter school name");
 
     const res = await register({
       name: name.value,

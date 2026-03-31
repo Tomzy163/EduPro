@@ -2,6 +2,10 @@ import mongoose from "mongoose";
 
 const resultSchema = new mongoose.Schema(
   {
+    school: {
+  type: String,
+  required: true,
+},
     student: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

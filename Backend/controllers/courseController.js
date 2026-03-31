@@ -4,11 +4,10 @@ import User from "../models/User.js";
 // CREATE COURSE
 export const createCourse = async (req, res) => {
   try {
-    const { name, teacher, term } = req.body;
+    const { name, term } = req.body;
 
     const course = await Course.create({
       name,
-      teacher,
       term,
       school: req.user.school, // ✅ correct here
     });

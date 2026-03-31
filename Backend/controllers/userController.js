@@ -7,32 +7,43 @@ import bcrypt from "bcryptjs";
 ========================= */
 export const registerUser = async (req, res) => {
   try {
-
-    console.log("Incoming data:", req.body); // 👈 ADD THIS
+    console.log("Incoming data:", req.body);
 
     const { name, email, password, school } = req.body;
-    if (!school) {
-      return res.status(400).json({ message: "School is required" });
+
+    // ✅ Validate
+    if (!name || !email || !password || !school) {
+      return res.status(400).json({
+        message: "All fields including school are required",
+      });
     }
 
     const existingUser = await User.findOne({ email, school });
     if (existingUser) {
-      return res.status(400).json({ message: "Admin already exists for this school" });
+      return res.status(400).json({
+        message: "Admin already exists for this school",
+      });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await User.create({
+        const user = await User.create({
       name,
       email,
       password: hashedPassword,
-      role: "admin",
-      school,
+      role,
+      school: req.user.school, // 🔥 ensure same school
     });
 
-    res.status(201).json({ message: "Admin registered successfully", user });
+    res.status(201).json({
+      message: "Admin registered successfully",
+      user,
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("REGISTER ERROR:", error);
+    res.status(500).json({
+      message: error.message,
+    });
   }
 };
 

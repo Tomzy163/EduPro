@@ -7,6 +7,7 @@ import {
   forgotPassword,
   resetPassword,
 } from "../controllers/authController.js";
+import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -20,7 +21,7 @@ router.post("/register", register);
 router.post("/login", loginUser);
 
 // ✅ Admin creates users (teacher, student, parent)
-router.post("/create-user", registerUser);
+router.post("/create-user", protect, registerUser);
 
 // ✅ Password reset
 router.post("/forgot-password", forgotPassword);

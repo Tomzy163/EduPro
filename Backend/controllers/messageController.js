@@ -11,7 +11,10 @@ export const sendMessage = async (req, res) => {
     // Determine recipients
     let recipients = [];
     if (roleTarget === "all") {
-      recipients = await User.find({ school: req.user.school }).select("_id");
+      recipients = await User.find({
+  role: roleTarget,
+  school: req.user.school // 🔥 CRITICAL
+});
     } else {
       recipients = await User.find({ role: roleTarget, school: req.user.school }).select("_id");
     }

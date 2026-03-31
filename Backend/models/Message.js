@@ -2,6 +2,10 @@ import mongoose from "mongoose";
 
 const messageSchema = new mongoose.Schema(
   {
+      school: {
+  type: String,
+  required: true,
+},
     title: String,
     content: String,
 

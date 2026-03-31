@@ -12,6 +12,7 @@ const showPassword = ref(false);
 const darkMode = ref(false);
 const loading = ref(false);
 const error = ref("");
+const school = ref("");
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -24,6 +25,7 @@ const handleLogin = async () => {
     await auth.loginUser({
       email: email.value,
       password: password.value,
+      school: school.value, // ✅ send school to backend
     });
 
     const role = auth.user.role;
@@ -85,6 +87,16 @@ const handleLogin = async () => {
       <p v-if="error" class="error">
         {{ error }}
       </p>
+
+      <!-- SCHOOL NAME -->
+          <div class="mb-4">
+      <label class="block text-sm mb-1">School</label>
+      <input
+        v-model="school"
+        placeholder="Enter your school name"
+        class="input"
+      />
+    </div>
 
       <!-- EMAIL -->
       <div class="form-group">

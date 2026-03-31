@@ -62,10 +62,22 @@ const fetchData = async () => {
 
 // Users
 const addUser = async () => {
-  if (!name.value || !email.value || !password.value || !role.value) return alert("Fill all fields");
-  await createUser({ name: name.value, email: email.value, password: password.value, role: role.value, school: schoolName.value });
-  name.value = email.value = password.value = "";
+  if (!name.value || !email.value || !password.value || !role.value) {
+    return alert("Fill all fields");
+  }
+
+  await createUser({
+    name: name.value,
+    email: email.value,
+    password: password.value,
+    role: role.value,
+  });
+
+  name.value = "";
+  email.value = "";
+  password.value = "";
   role.value = "teacher";
+
   fetchData();
 };
 

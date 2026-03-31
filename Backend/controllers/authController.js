@@ -6,8 +6,8 @@ import School from "../models/School.js";
 // import User from "../models/User.js";
 
 // Generate token
-const generateToken = (id, role) => {
-  return jwt.sign({ id, role }, process.env.JWT_SECRET, {
+const generateToken = (id, role, school) => {
+  return jwt.sign({ id, role, school }, process.env.JWT_SECRET, {
     expiresIn: "7d",
   });
 };
@@ -15,22 +15,27 @@ const generateToken = (id, role) => {
 // LOGIN
 export const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, school } = req.body;
 
-    const user = await User.findOne({ email });
+    if (!school) {
+      return res.status(400).json({ message: "School is required" });
+    }
+
+    const user = await User.findOne({ email, school });
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
     res.json({
-  _id: user._id,
-  name: user.name,
-  email: user.email,
-  role: user.role,
-  school: user.school, // ✅ IMPORTANT
-  token: generateToken(user._id, user.role),
-});
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      school: user.school,
+      token: generateToken(user._id, user.role, user.school),
+    });
+
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -47,11 +52,12 @@ export const registerUser = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await User.create({
+        const user = await User.create({
       name,
       email,
       password: hashedPassword,
       role,
+      school: req.user.school, // 🔥 ensure same school
     });
 
     res.json(user);
@@ -97,10 +103,13 @@ export const registerUser = async (req, res) => {
 
 export const register = async (req, res) => {
   try {
-    const { name, email, password, schoolName } = req.body;
+    const { name, email, password, school } = req.body;
 
-    // Check if school already exists
-    const existingSchool = await School.findOne({ name: schoolName });
+    if (!school) {
+      return res.status(400).json({ message: "School is required" });
+    }
+
+    const existingSchool = await School.findOne({ name: school });
 
     if (existingSchool) {
       return res.status(400).json({
@@ -108,34 +117,29 @@ export const register = async (req, res) => {
       });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create admin
     const admin = await User.create({
       name,
       email,
       password: hashedPassword,
       role: "admin",
+      school, // ✅ FIXED
     });
 
-    // Create school
-    const school = await School.create({
-      name: schoolName,
+    const schoolDoc = await School.create({
+      name: school,
       admin: admin._id,
     });
-
-    // Link admin to school
-    admin.school = school._id;
-    await admin.save();
 
     res.status(201).json({
       message: "School registered successfully",
       admin,
-      school,
+      school: schoolDoc,
     });
 
   } catch (error) {
+    console.error("REGISTER ERROR:", error);
     res.status(500).json({ message: error.message });
   }
 };
