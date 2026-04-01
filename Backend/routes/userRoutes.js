@@ -15,19 +15,19 @@ const router = express.Router();
 // 🔐 Protect all routes
 router.use(protect, authorize("admin"));
 
-// ✅ GET ALL USERS → /api/users
+// GET all users
 router.get("/", getUsers);
 
-// ✅ CREATE USER → /api/users
+// CREATE user
 router.post("/", createUser);
 
-// ✅ GET SINGLE USER → /api/users/:id
+// GET single
 router.get("/:id", getUser);
 
-// ✅ UPDATE USER → /api/users/:id
+// UPDATE
 router.put("/:id", updateUser);
 
-// ✅ DELETE USER → /api/users/:id
+// DELETE
 router.delete("/:id", deleteUser);
 
 export default router;

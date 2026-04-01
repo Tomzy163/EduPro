@@ -34,10 +34,10 @@ const routes = [
   path: "/dashboard",
   component: DashboardLayout,
   children: [
-    { path: "/dashboard/admin", component: AdminDashboard },
-    { path: "/dashboard/teacher", component: TeacherDashboard },
-    { path: "/dashboard/student", component: StudentDashboard },
-    { path: "/dashboard/parent", component: ParentDashboard },
+    { path: "admin", component: AdminDashboard },
+    { path: "teacher", component: TeacherDashboard },
+    { path: "student", component: StudentDashboard },
+    { path: "parent", component: ParentDashboard },
   ],
 }
 ];
@@ -48,7 +48,7 @@ const router = createRouter({
 });
 // ✅ Route guard for authentication & role-based access
 router.beforeEach((to, from, next) => {
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = JSON.parse(sessionStorage.getItem("user")); // ✅ changed
 
   const publicPages = ["/", "/register", "/forgot-password", "/reset-password"];
   const authRequired = !publicPages.includes(to.path);
@@ -57,7 +57,6 @@ router.beforeEach((to, from, next) => {
     return next("/");
   }
 
-  // Role-based protection
   const roleMap = {
     "/dashboard/admin": "admin",
     "/dashboard/teacher": "teacher",
@@ -65,7 +64,7 @@ router.beforeEach((to, from, next) => {
     "/dashboard/parent": "parent",
   };
 
-  if (roleMap[to.path] && user?.role !== roleMap[to.path]) {
+  if (user && roleMap[to.path] && user.role !== roleMap[to.path]) {
     return next("/");
   }
 

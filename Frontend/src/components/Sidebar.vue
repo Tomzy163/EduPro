@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from "vue";
 
-const user = JSON.parse(localStorage.getItem("user"));
+const user = JSON.parse(sessionStorage.getItem("user")); // ✅ changed
 
 // Dynamic menu based on role
 const menu = computed(() => {
