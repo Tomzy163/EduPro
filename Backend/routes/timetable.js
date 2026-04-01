@@ -1,4 +1,3 @@
-// routes/timetable.js
 import express from "express";
 import Timetable from "../models/Timetable.js";
 
@@ -13,7 +12,7 @@ router.get("/", async (req, res) => {
       .populate("student");
     res.json(slots);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 
@@ -24,7 +23,17 @@ router.post("/", async (req, res) => {
     const slot = await Timetable.create({ course, teacher, student, day, time });
     res.status(201).json(slot);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(400).json({ message: err.message });
+  }
+});
+
+// DELETE a slot
+router.delete("/:id", async (req, res) => {
+  try {
+    await Timetable.findByIdAndDelete(req.params.id);
+    res.json({ message: "Deleted" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 

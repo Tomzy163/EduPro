@@ -29,7 +29,7 @@ app.use("/api/results", resultRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/messages", messageRoutes);
-app.use("/timetable", timetableRoutes);
+app.use("/api/timetable", timetableRoutes);
 // app.get("/test", (req, res) => {
 //   res.send("Test route works");
 // });
