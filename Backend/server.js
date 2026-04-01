@@ -7,6 +7,7 @@ import userRoutes from "./routes/userRoutes.js";
 import courseRoutes from "./routes/courseRoutes.js";
 import resultRoutes from "./routes/resultRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
+import timetableRoutes from "./routes/timetable.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import { Server } from "socket.io";
@@ -28,6 +29,7 @@ app.use("/api/results", resultRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/timetable", timetableRoutes);
 // app.get("/test", (req, res) => {
 //   res.send("Test route works");
 // });

@@ -21,7 +21,8 @@ export const loginUser = async (req, res) => {
       return res.status(400).json({ message: "School is required" });
     }
 
-    const user = await User.findOne({ email, school });
+    // const user = await User.findOne({ email, school });
+    const user = await User.findOne({ email }).populate("school");
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ message: "Invalid credentials" });
@@ -203,4 +204,32 @@ export const resetPassword = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
+};
+
+// import School from "../models/School.js";
+// import User from "../models/User.js";
+
+export const registerSchool = async (req, res) => {
+  const { schoolName, adminName, email, password } = req.body;
+
+  // 1. Create school
+  const school = await School.create({
+    name: schoolName,
+    email,
+  });
+
+  // 2. Create admin linked to school
+  const admin = await User.create({
+    name: adminName,
+    email,
+    password,
+    role: "admin",
+    school: school._id,
+  });
+
+  res.json({
+    message: "School created successfully",
+    school,
+    admin,
+  });
 };
