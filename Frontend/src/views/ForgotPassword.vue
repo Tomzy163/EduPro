@@ -49,7 +49,7 @@ const submit = async () => {
 
 .forgot-card {
   background-color: #ffffff;
-  padding: 40px 30px;
+  padding: 40px 40px;
   border-radius: 12px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
   width: 100%;

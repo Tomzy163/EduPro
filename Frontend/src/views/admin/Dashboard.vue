@@ -21,11 +21,14 @@ const timetable = ref([]); // existing timetable
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 const times = ["08:00-09:00", "09:00-10:00", "10:00-11:00", "11:00-12:00"];
 
-const selectedCourse = ref("");
-const selectedTeacher = ref("");
-const selectedStudent = ref("");
-const selectedDay = ref("");
-const selectedTime = ref("");
+// ======================
+// TIMETABLE STATE
+// ======================
+const timetableCourse = ref("");
+const timetableTeacher = ref("");
+const timetableStudent = ref("");
+const timetableDay = ref("");
+const timetableTime = ref("");
 
 // Fetch timetable
 const fetchTimetable = async () => {
@@ -35,24 +38,29 @@ const fetchTimetable = async () => {
 
 // Add timetable slot
 const addSlot = async () => {
-  if (!selectedCourse.value || !selectedTeacher.value || !selectedDay.value || !selectedTime.value) {
+  if (
+    !timetableCourse.value ||
+    !timetableTeacher.value ||
+    !timetableDay.value ||
+    !timetableTime.value
+  ) {
     return alert("Please fill all fields");
   }
 
   await API.post("/timetable", {
-    course: selectedCourse.value,
-    teacher: selectedTeacher.value,
-    student: selectedStudent.value || null,
-    day: selectedDay.value,
-    time: selectedTime.value,
+    course: timetableCourse.value,
+    teacher: timetableTeacher.value,
+    student: timetableStudent.value || null,
+    day: timetableDay.value,
+    time: timetableTime.value,
   });
 
   // Reset form
-  selectedCourse.value = "";
-  selectedTeacher.value = "";
-  selectedStudent.value = "";
-  selectedDay.value = "";
-  selectedTime.value = "";
+  timetableCourse.value = "";
+  timetableTeacher.value = "";
+  timetableStudent.value = "";
+  timetableDay.value = "";
+  timetableTime.value = "";
 
   fetchTimetable();
 };
@@ -76,10 +84,12 @@ const schoolName = ref(localStorage.getItem("schoolName") || "");
 const courseName = ref("");
 const term = ref("First Term");
 
-// ASSIGNMENT
-const selectedCourse = ref("");
-const selectedTeacher = ref("");
-const selectedStudent = ref("");
+// ======================
+// ASSIGNMENT STATE
+// ======================
+const assignCourse = ref("");
+const assignTeacherId = ref("");
+const assignStudentId = ref("");
 
 // ANNOUNCEMENT
 const title = ref("");
@@ -145,16 +155,32 @@ const addCourse = async () => {
 };
 
 const assignTeacherToCourse = async () => {
-  if (!selectedCourse.value || !selectedTeacher.value) return alert("Select course and teacher");
-  await assignTeacher({ courseId: selectedCourse.value, teacherId: selectedTeacher.value });
-  selectedCourse.value = selectedTeacher.value = "";
+  if (!assignCourse.value || !assignTeacherId.value)
+    return alert("Select course and teacher");
+
+  await assignTeacher({
+    courseId: assignCourse.value,
+    teacherId: assignTeacherId.value,
+  });
+
+  assignCourse.value = "";
+  assignTeacherId.value = "";
+
   fetchData();
 };
 
 const assignStudentToCourse = async () => {
-  if (!selectedCourse.value || !selectedStudent.value) return alert("Select course and student");
-  await assignStudent({ courseId: selectedCourse.value, studentId: selectedStudent.value });
-  selectedCourse.value = selectedStudent.value = "";
+  if (!assignCourse.value || !assignStudentId.value)
+    return alert("Select course and student");
+
+  await assignStudent({
+    courseId: assignCourse.value,
+    studentId: assignStudentId.value,
+  });
+
+  assignCourse.value = "";
+  assignStudentId.value = "";
+
   fetchData();
 };
 
@@ -172,6 +198,7 @@ const approvePayment = async (id, status) => {
 onMounted(() => {
   fetchData();
   fetchPayments();
+  fetchTimetable(); // ✅ ADD THIS
 });
 </script>
 
@@ -252,11 +279,11 @@ onMounted(() => {
     <!-- ASSIGN TEACHER -->
     <section class="card">
       <h2 class="section-title">Assign Teacher</h2>
-      <select v-model="selectedCourse" class="input mb-2">
+      <select v-model="assignCourse" class="input mb-2">
         <option disabled value="">Select Course</option>
         <option v-for="c in courses" :key="c._id" :value="c._id">{{ c.name }}</option>
       </select>
-      <select v-model="selectedTeacher" class="input mb-2">
+      <select v-model="assignTeacherId" class="input mb-2">
         <option disabled value="">Select Teacher</option>
         <option v-for="u in users.filter(u => u.role === 'teacher')" :key="u._id" :value="u._id">{{ u.name }}</option>
       </select>
@@ -275,7 +302,7 @@ onMounted(() => {
     <!-- ASSIGN STUDENT -->
     <section class="card">
       <h2 class="section-title">Assign Student</h2>
-      <select v-model="selectedStudent" class="input mb-2">
+      <select v-model="assignStudentId" class="input mb-2">
         <option disabled value="">Select Student</option>
         <option v-for="u in users.filter(u => u.role === 'student')" :key="u._id" :value="u._id">{{ u.name }}</option>
       </select>
@@ -297,27 +324,27 @@ onMounted(() => {
   <h2 class="section-title">Manage Timetable</h2>
 
   <div class="form-grid mb-4">
-    <select v-model="selectedCourse" class="input">
+    <select v-model="timetableCourse" class="input">
       <option disabled value="">Select Course</option>
       <option v-for="c in courses" :key="c._id" :value="c._id">{{ c.name }}</option>
     </select>
 
-    <select v-model="selectedTeacher" class="input">
+    <select v-model="timetableTeacher" class="input">
       <option disabled value="">Select Teacher</option>
       <option v-for="u in users.filter(u => u.role==='teacher')" :key="u._id" :value="u._id">{{ u.name }}</option>
     </select>
 
-    <select v-model="selectedStudent" class="input">
+    <select v-model="timetableStudent" class="input">
       <option value="">All Students</option>
       <option v-for="u in users.filter(u => u.role==='student')" :key="u._id" :value="u._id">{{ u.name }}</option>
     </select>
 
-    <select v-model="selectedDay" class="input">
+    <select v-model="timetableDay" class="input">
       <option disabled value="">Select Day</option>
       <option v-for="d in days" :key="d">{{ d }}</option>
     </select>
 
-    <select v-model="selectedTime" class="input">
+    <select v-model="timetableTime" class="input">
       <option disabled value="">Select Time</option>
       <option v-for="t in times" :key="t">{{ t }}</option>
     </select>
