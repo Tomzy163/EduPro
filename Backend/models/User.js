@@ -2,17 +2,22 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
-        school:  mongoose.Schema.Types.ObjectId,
-    ref: "School",
-    required: true,
+    school: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "School",
+      required: true,
     },
+
     name: { 
       type: String, 
       required: true 
     },
+
     email: { 
       type: String, 
-      required: true },
+      required: true 
+    },
+
     password: String,
 
     role: {
@@ -38,12 +43,13 @@ const userSchema = new mongoose.Schema(
 
     courses: [{ type: mongoose.Schema.Types.ObjectId, ref: "Course" }],
     children: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-     resetToken: String,
-   resetTokenExpire: Date,
+
+    resetToken: String,
+    resetTokenExpire: Date,
   },
-  
   { timestamps: true }
 );
+
 userSchema.index({ email: 1, school: 1 }, { unique: true });
 
 export default mongoose.model("User", userSchema);

@@ -5,6 +5,11 @@ import {
   getUser,
   updateUser,
   deleteUser,
+  assignStudent,
+  assignTeacher,
+  linkParentToStudent,
+  getStudentsWithCourses,
+  getTeachersWithCourses,
 } from "../controllers/userController.js";
 
 import { protect } from "../middleware/authMiddleware.js";
