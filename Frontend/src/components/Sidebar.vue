@@ -9,25 +9,25 @@ const menu = computed(() => {
 
   if (user.role === "admin") {
     return [
-      { name: "Dashboard", path: "/admin" },
+      { name: "Dashboard", path: "/dashboard/admin" },
     ];
   }
 
   if (user.role === "teacher") {
     return [
-      { name: "Dashboard", path: "/teacher" },
+      { name: "Dashboard", path: "/dashboard/teacher" },
     ];
   }
 
   if (user.role === "student") {
     return [
-      { name: "Dashboard", path: "/student" },
+      { name: "Dashboard", path: "/dashboard/student" },
     ];
   }
 
   if (user.role === "parent") {
     return [
-      { name: "Dashboard", path: "/parent" },
+      { name: "Dashboard", path: "/dashboard/parent" },
     ];
   }
 

@@ -34,10 +34,10 @@ const routes = [
   path: "/dashboard",
   component: DashboardLayout,
   children: [
-    { path: "admin", component: AdminDashboard },
-    { path: "teacher", component: TeacherDashboard },
-    { path: "student", component: StudentDashboard },
-    { path: "parent", component: ParentDashboard },
+    { path: "/dashboard/admin", component: AdminDashboard },
+    { path: "/dashboard/teacher", component: TeacherDashboard },
+    { path: "/dashboard/student", component: StudentDashboard },
+    { path: "/dashboard/parent", component: ParentDashboard },
   ],
 }
 ];
