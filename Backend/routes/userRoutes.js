@@ -30,4 +30,11 @@ router.put("/:id", updateUser);
 // DELETE
 router.delete("/:id", deleteUser);
 
+router.post("/assign-student", assignStudent);
+router.post("/assign-teacher", assignTeacher);
+router.post("/link-parent", linkParentToStudent);
+
+router.get("/students-with-courses", getStudentsWithCourses);
+router.get("/teachers-with-courses", getTeachersWithCourses);
+
 export default router;

@@ -2,9 +2,9 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
-        school: {
-      type: String,
-      required: true,
+        school:  mongoose.Schema.Types.ObjectId,
+    ref: "School",
+    required: true,
     },
     name: { 
       type: String, 

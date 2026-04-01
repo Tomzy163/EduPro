@@ -34,21 +34,26 @@ export const getCourses = async (req, res) => {
 // ASSIGN STUDENT TO COURSE
 export const assignStudent = async (req, res) => {
   try {
-    const { courseId, studentId } = req.body;
+    const { studentId, courseId } = req.body;
 
+    const student = await User.findById(studentId);
     const course = await Course.findById(courseId);
 
-    if (!course) return res.status(404).json({ message: "Course not found" });
-
-    if (!course.students.includes(studentId)) {
-      course.students.push(studentId);
+    if (!student || !course) {
+      return res.status(404).json({ message: "Student or Course not found" });
     }
 
+    // Add course to student
+    student.courses.push(courseId);
+    await student.save();
+
+    // Add student to course
+    course.students.push(studentId);
     await course.save();
 
-    res.json(course);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.json({ message: "Course assigned to student" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
@@ -58,15 +63,71 @@ export const assignTeacher = async (req, res) => {
     const { courseId, teacherId } = req.body;
 
     const course = await Course.findById(courseId);
-
     if (!course) return res.status(404).json({ message: "Course not found" });
 
     course.teacher = teacherId;
-
     await course.save();
 
-    res.json(course);
+    res.json({ message: "Teacher assigned", course });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const linkParentToStudent = async (req, res) => {
+  try {
+    const { parentId, studentId } = req.body;
+
+    const parent = await User.findById(parentId);
+    const student = await User.findById(studentId);
+
+    if (!parent || !student) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Link both ways
+    parent.children.push(studentId);
+    student.parent = parentId;
+
+    await parent.save();
+    await student.save();
+
+    res.json({ message: "Parent linked to student" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const getStudentsWithCourses = async (req, res) => {
+  try {
+    const students = await User.find({
+      role: "student",
+      school: req.user.school,
+    });
+
+    const courses = await Course.find()
+      .populate("teacher", "name")
+      .populate("students", "name");
+
+    res.json({ students, courses });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getTeachersWithCourses = async (req, res) => {
+  try {
+    const teachers = await User.find({
+      role: "teacher",
+      school: req.user.school,
+    });
+
+    const courses = await Course.find({
+      school: req.user.school,
+    }).populate("teacher");
+
+    res.json({ teachers, courses });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
