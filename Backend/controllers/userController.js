@@ -159,3 +159,122 @@ export const deleteUser = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+/* =========================
+   LINK PARENT ↔ STUDENT
+========================= */
+export const linkParentToStudent = async (req, res) => {
+  try {
+    const { parentId, studentId } = req.body;
+
+    const parent = await User.findById(parentId);
+    const student = await User.findById(studentId);
+
+    if (!parent || !student) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // ensure same school
+    if (parent.school.toString() !== req.user.school.toString()) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    student.parent = parentId;
+
+    if (!parent.children.includes(studentId)) {
+      parent.children.push(studentId);
+    }
+
+    await student.save();
+    await parent.save();
+
+    res.json({ message: "Parent linked successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* =========================
+   ASSIGN TEACHER TO STUDENT
+========================= */
+export const assignTeacher = async (req, res) => {
+  try {
+    const { studentId, teacherId } = req.body;
+
+    const student = await User.findById(studentId);
+    const teacher = await User.findById(teacherId);
+
+    if (!student || !teacher) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    student.teacher = teacherId;
+
+    await student.save();
+
+    res.json({ message: "Teacher assigned successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* =========================
+   ASSIGN COURSE TO STUDENT
+========================= */
+export const assignStudent = async (req, res) => {
+  try {
+    const { studentId, courseId } = req.body;
+
+    const student = await User.findById(studentId);
+
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    // multiple courses allowed
+    if (!student.courses.includes(courseId)) {
+      student.courses.push(courseId);
+    }
+
+    await student.save();
+
+    res.json({ message: "Course assigned to student" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* =========================
+   GET STUDENTS WITH COURSES
+========================= */
+export const getStudentsWithCourses = async (req, res) => {
+  try {
+    const students = await User.find({
+      role: "student",
+      school: req.user.school,
+    })
+      .populate("courses")
+      .populate("teacher", "name email")
+      .populate("parent", "name email");
+
+    res.json(students);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* =========================
+   GET TEACHERS WITH COURSES
+========================= */
+export const getTeachersWithCourses = async (req, res) => {
+  try {
+    const teachers = await User.find({
+      role: "teacher",
+      school: req.user.school,
+    }).populate("courses");
+
+    res.json(teachers);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
