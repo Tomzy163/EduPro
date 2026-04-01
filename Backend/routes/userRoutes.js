@@ -1,3 +1,4 @@
+// backend/routes/userRoutes.js
 import express from "express";
 import {
   createUser,
@@ -5,9 +6,9 @@ import {
   getUser,
   updateUser,
   deleteUser,
-  assignStudent,
-  assignTeacher,
   linkParentToStudent,
+  assignTeacher,
+  assignStudent,
   getStudentsWithCourses,
   getTeachersWithCourses,
 } from "../controllers/userController.js";
@@ -17,29 +18,24 @@ import { authorize } from "../middleware/roleMiddleware.js";
 
 const router = express.Router();
 
-// 🔐 Protect all routes
-router.use(protect, authorize("admin"));
+// All routes protected
+router.use(protect);
 
-// GET all users
-router.get("/", getUsers);
+// ADMIN ONLY ROUTES
+router.get("/", authorize("admin"), getUsers);
+router.post("/", authorize("admin"), createUser);
 
-// CREATE user
-router.post("/", createUser);
+router.get("/:id", authorize("admin"), getUser);
+router.put("/:id", authorize("admin"), updateUser);
+router.delete("/:id", authorize("admin"), deleteUser);
 
-// GET single
-router.get("/:id", getUser);
+// ADVANCED FEATURES
+router.post("/link-parent", authorize("admin"), linkParentToStudent);
+router.post("/assign-teacher", authorize("admin"), assignTeacher);
+router.post("/assign-course", authorize("admin"), assignStudent);
 
-// UPDATE
-router.put("/:id", updateUser);
-
-// DELETE
-router.delete("/:id", deleteUser);
-
-router.post("/assign-student", assignStudent);
-router.post("/assign-teacher", assignTeacher);
-router.post("/link-parent", linkParentToStudent);
-
-router.get("/students-with-courses", getStudentsWithCourses);
-router.get("/teachers-with-courses", getTeachersWithCourses);
+// ANALYTICS
+router.get("/students-with-courses", authorize("admin"), getStudentsWithCourses);
+router.get("/teachers-with-courses", authorize("admin"), getTeachersWithCourses);
 
 export default router;

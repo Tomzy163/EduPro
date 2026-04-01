@@ -1,56 +1,70 @@
 <script setup>
 import { computed } from "vue";
 
-const user = JSON.parse(sessionStorage.getItem("user")); // ✅ changed
+const user = JSON.parse(sessionStorage.getItem("user"));
 
-// Dynamic menu based on role
 const menu = computed(() => {
   if (!user) return [];
 
-  if (user.role === "admin") {
-    return [
-      { name: "Dashboard", path: "/dashboard/admin" },
-    ];
-  }
-
-  if (user.role === "teacher") {
-    return [
-      { name: "Dashboard", path: "/dashboard/teacher" },
-    ];
-  }
-
-  if (user.role === "student") {
-    return [
-      { name: "Dashboard", path: "/dashboard/student" },
-    ];
-  }
-
-  if (user.role === "parent") {
-    return [
-      { name: "Dashboard", path: "/dashboard/parent" },
-    ];
-  }
-
-  return [];
+  const roles = {
+    admin: "/dashboard/admin",
+    teacher: "/dashboard/teacher",
+    student: "/dashboard/student",
+    parent: "/dashboard/parent",
+  };
+  
+  return [{ name: "Dashboard", path: roles[user.role] }];
 });
 </script>
 
 <template>
-  <div class="w-64 h-screen bg-gray-900 text-white p-4">
-    <h2 class="text-xl font-bold mb-6 border-b border-gray-700 pb-2">
-  School System
-</h2>
-
-    <ul class="space-y-3">
+  <div class="sidebar">
+    <h2 class="sidebar-title">School System</h2>
+    <ul class="sidebar-menu">
       <li v-for="item in menu" :key="item.path">
-        <router-link
-          :to="item.path"
-          class="block p-2 rounded hover:bg-gray-700"
-          active-class="bg-gray-700"
-        >
+        <router-link :to="item.path" class="menu-item" active-class="active">
           {{ item.name }}
         </router-link>
       </li>
     </ul>
   </div>
 </template>
+
+<style scoped>
+.sidebar {
+  width: 220px;
+  min-height: 100vh;
+  background-color: #1f2937;
+  color: #ffffff;
+  padding: 1rem;
+}
+
+.sidebar-title {
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #374151;
+  padding-bottom: 0.5rem;
+}
+
+.sidebar-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.menu-item {
+  display: block;
+  padding: 0.6rem 0.8rem;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.menu-item:hover {
+  background-color: #374151;
+}
+
+.active {
+  background-color: #4b5563;
+}
+</style>

@@ -17,6 +17,54 @@ const users = ref([]);
 const courses = ref([]);
 const payments = ref([]);
 
+const timetable = ref([]); // existing timetable
+const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+const times = ["08:00-09:00", "09:00-10:00", "10:00-11:00", "11:00-12:00"];
+
+const selectedCourse = ref("");
+const selectedTeacher = ref("");
+const selectedStudent = ref("");
+const selectedDay = ref("");
+const selectedTime = ref("");
+
+// Fetch timetable
+const fetchTimetable = async () => {
+  const res = await API.get("/timetable");
+  timetable.value = res.data;
+};
+
+// Add timetable slot
+const addSlot = async () => {
+  if (!selectedCourse.value || !selectedTeacher.value || !selectedDay.value || !selectedTime.value) {
+    return alert("Please fill all fields");
+  }
+
+  await API.post("/timetable", {
+    course: selectedCourse.value,
+    teacher: selectedTeacher.value,
+    student: selectedStudent.value || null,
+    day: selectedDay.value,
+    time: selectedTime.value,
+  });
+
+  // Reset form
+  selectedCourse.value = "";
+  selectedTeacher.value = "";
+  selectedStudent.value = "";
+  selectedDay.value = "";
+  selectedTime.value = "";
+
+  fetchTimetable();
+};
+
+// Delete timetable slot
+const removeSlot = async (id) => {
+  if (confirm("Delete this timetable slot?")) {
+    await API.delete(`/timetable/${id}`);
+    fetchTimetable();
+  }
+};
+
 // USER FORM
 const name = ref("");
 const email = ref("");
@@ -213,6 +261,15 @@ onMounted(() => {
         <option v-for="u in users.filter(u => u.role === 'teacher')" :key="u._id" :value="u._id">{{ u.name }}</option>
       </select>
       <button @click="assignTeacherToCourse" class="btn btn-primary">Assign</button>
+      <div v-for="teacher in users.filter(u => u.role === 'teacher')" :key="teacher._id">
+        <h4>{{ teacher.name }}</h4>
+
+        <ul>
+          <li v-for="course in courses.filter(c => c.teacher === teacher._id)">
+            {{ course.name }}
+          </li>
+        </ul>
+      </div>
     </section>
 
     <!-- ASSIGN STUDENT -->
@@ -223,7 +280,79 @@ onMounted(() => {
         <option v-for="u in users.filter(u => u.role === 'student')" :key="u._id" :value="u._id">{{ u.name }}</option>
       </select>
       <button @click="assignStudentToCourse" class="btn btn-primary">Assign</button>
+
+                <div v-for="student in users.filter(u => u.role === 'student')" :key="student._id">
+        <h4>{{ student.name }}</h4>
+
+        <ul>
+          <li v-for="course in courses.filter(c => c.students.includes(student._id))">
+            {{ course.name }}
+          </li>
+        </ul>
+      </div>
     </section>
+
+
+    <section class="card">
+  <h2 class="section-title">Manage Timetable</h2>
+
+  <div class="form-grid mb-4">
+    <select v-model="selectedCourse" class="input">
+      <option disabled value="">Select Course</option>
+      <option v-for="c in courses" :key="c._id" :value="c._id">{{ c.name }}</option>
+    </select>
+
+    <select v-model="selectedTeacher" class="input">
+      <option disabled value="">Select Teacher</option>
+      <option v-for="u in users.filter(u => u.role==='teacher')" :key="u._id" :value="u._id">{{ u.name }}</option>
+    </select>
+
+    <select v-model="selectedStudent" class="input">
+      <option value="">All Students</option>
+      <option v-for="u in users.filter(u => u.role==='student')" :key="u._id" :value="u._id">{{ u.name }}</option>
+    </select>
+
+    <select v-model="selectedDay" class="input">
+      <option disabled value="">Select Day</option>
+      <option v-for="d in days" :key="d">{{ d }}</option>
+    </select>
+
+    <select v-model="selectedTime" class="input">
+      <option disabled value="">Select Time</option>
+      <option v-for="t in times" :key="t">{{ t }}</option>
+    </select>
+  </div>
+
+  <button @click="addSlot" class="btn btn-primary mb-4">Add Slot</button>
+
+  <!-- Timetable Table -->
+  <div class="table-wrapper">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Day</th>
+          <th>Time</th>
+          <th>Course</th>
+          <th>Teacher</th>
+          <th>Student</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="slot in timetable" :key="slot._id">
+          <td>{{ slot.day }}</td>
+          <td>{{ slot.time }}</td>
+          <td>{{ slot.course?.name }}</td>
+          <td>{{ slot.teacher?.name }}</td>
+          <td>{{ slot.student?.name || "All" }}</td>
+          <td>
+            <button @click="removeSlot(slot._id)" class="btn btn-danger btn-sm">Delete</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
 
     <!-- PAYMENTS -->
     <section class="card">
@@ -375,4 +504,11 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
 }
+
+
+.table-wrapper { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td { padding: 0.75rem 1rem; border-bottom: 1px solid #e5e7eb; }
+.table th { background: #f9fafb; font-weight: 600; text-align: left; }
+.btn-sm { padding: 0.3rem 0.6rem; font-size: 0.8rem; }
 </style>

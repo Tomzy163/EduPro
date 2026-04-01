@@ -6,26 +6,107 @@ const token = ref("");
 const password = ref("");
 
 const submit = async () => {
-  await resetPassword({
-    token: token.value,
-    password: password.value,
-  });
-
-  alert("Password reset successful");
+  try {
+    await resetPassword({
+      token: token.value,
+      password: password.value,
+    });
+    alert("Password reset successful");
+    token.value = "";
+    password.value = "";
+  } catch (err) {
+    alert(err.response?.data?.message || "Error resetting password");
+  }
 };
 </script>
 
 <template>
-  <div class="flex justify-center items-center h-screen">
-    <div class="bg-white p-6 shadow rounded">
+  <div class="reset-container">
+    <div class="reset-card">
       <h2>Reset Password</h2>
 
-      <input v-model="token" placeholder="Token" class="border p-2 mb-2" />
-      <input v-model="password" placeholder="New Password" class="border p-2 mb-3" />
+      <input
+        v-model="token"
+        type="text"
+        placeholder="Token"
+        class="input-field"
+      />
+      <input
+        v-model="password"
+        type="password"
+        placeholder="New Password"
+        class="input-field"
+      />
 
-      <button @click="submit" class="bg-green-500 text-white p-2 w-full">
+      <button @click="submit" class="submit-btn">
         Reset Password
       </button>
     </div>
   </div>
 </template>
+
+<style scoped>
+.reset-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #f4f7fa;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.reset-card {
+  background-color: #ffffff;
+  padding: 40px 30px;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.reset-card h2 {
+  font-size: 24px;
+  color: #333333;
+  margin-bottom: 30px;
+  font-weight: 600;
+}
+
+.input-field {
+  width: 100%;
+  padding: 12px 15px;
+  margin-bottom: 20px;
+  border: 1px solid #cccccc;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: border-color 0.2s;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: #4caf50;
+  box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #4caf50;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.submit-btn:hover {
+  background-color: #45a049;
+  transform: translateY(-1px);
+}
+
+.submit-btn:active {
+  transform: translateY(1px);
+}
+</style>
