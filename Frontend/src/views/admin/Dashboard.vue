@@ -306,6 +306,10 @@ onMounted(() => {
         <option disabled value="">Select Student</option>
         <option v-for="u in users.filter(u => u.role === 'student')" :key="u._id" :value="u._id">{{ u.name }}</option>
       </select>
+      <select v-model="assignCourse" class="input mb-2">
+        <option disabled value="">Select Course</option>
+        <option v-for="c in courses" :key="c._id" :value="c._id">{{ c.name }}</option>
+      </select>
       <button @click="assignStudentToCourse" class="btn btn-primary">Assign</button>
 
                 <div v-for="student in users.filter(u => u.role === 'student')" :key="student._id">
