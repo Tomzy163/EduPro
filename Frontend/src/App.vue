@@ -1,7 +1,7 @@
 <script setup>
 import { useRoute } from "vue-router";
-import Sidebar from "./components/Sidebar.vue";
-import Navbar from "./components/Navbar.vue";
+// import Sidebar from "./components/Sidebar.vue";
+// import Navbar from "./components/Navbar.vue";
 
 const route = useRoute();
 </script>

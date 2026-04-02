@@ -24,16 +24,38 @@ export const registerUser = async (req, res) => {
         message: "Admin already exists for this school",
       });
     }
+          // Check if school already has an admin
+      const existingAdmin = await User.findOne({
+        school: school._id,
+        role: "admin",
+      });
+
+      // If admin exists → no more admins
+      let userRole = role || "admin";
+
+      if (existingAdmin && userRole === "admin") {
+        return res.status(400).json({
+          message: "Admin already exists for this school",
+        });
+      }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-          const user = await User.create({
-      name,
-      email,
-      password: hashedPassword,
-      role, // or remove this function entirely
-      school: req.user.school, // 🔥 ensure same school
-        });
+      //     const user = await User.create({
+      // name,
+      // email,
+      // password: hashedPassword,
+      // role, // or remove this function entirely
+      // school: req.user.school, // 🔥 ensure same school
+      //   });
+
+      const user = await User.create({
+  name,
+  email,
+  password: hashedPassword,
+  school: school._id,
+  role: userRole,
+});
 
     res.status(201).json({
       message: "Admin registered successfully",

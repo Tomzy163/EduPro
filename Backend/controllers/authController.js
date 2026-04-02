@@ -3,162 +3,163 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import School from "../models/School.js";
-// import User from "../models/User.js";
 
 // Generate token
-const generateToken = (id, role, school) => {
-  return jwt.sign({ id, role, school }, process.env.JWT_SECRET, {
+const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: "7d",
   });
 };
 
-// LOGIN
-export const loginUser = async (req, res) => {
-  try {
-    const { email, password, school } = req.body;
-
-    if (!school) {
-      return res.status(400).json({ message: "School is required" });
-    }
-
-    // const user = await User.findOne({ email, school });
-    const user = await User.findOne({ email }).populate("school");
-
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    res.json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      school: user.school,
-      token: generateToken(user._id, user.role, user.school),
-    });
-
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// REGISTER (Admin creates users)
-export const registerUser = async (req, res) => {
-  try {
-    const { name, email, password, role } = req.body;
-
-    const userExists = await User.findOne({ email });
-    if (userExists)
-      return res.status(400).json({ message: "User already exists" });
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-        const user = await User.create({
-      name,
-      email,
-      password: hashedPassword,
-      role,
-      school: req.user.school, // 🔥 ensure same school
-    });
-
-    res.json(user);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// export const register = async (req, res) => {
-//   try {
-//     const { name, email, password } = req.body;
-
-//     // ❗ Check if admin already exists
-//     const existingAdmin = await User.findOne({ role: "admin" });
-
-//     if (existingAdmin) {
-//       return res.status(403).json({
-//         message: "Admin already exists. Contact admin.",
-//       });
-//     }
-
-//     // ✅ HASH PASSWORD HERE
-//     const hashedPassword = await bcrypt.hash(password, 10);
-//       user.password = hashedPassword;
-//     // ✅ CREATE ADMIN
-//     const user = await User.create({
-//       name,
-//       email,
-//       password: hashedPassword,
-//       role: "admin",
-//     });
-
-//     res.status(201).json({
-//       _id: user._id,
-//       name: user.name,
-//       role: user.role,
-//     });
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// };
-
-
+//
+// =======================
+// REGISTER SCHOOL + ADMIN
+// =======================
 export const register = async (req, res) => {
   try {
-    const { name, email, password, school } = req.body;
+    const { name, email, password, school: schoolName } = req.body;
 
-    if (!school) {
+    if (!schoolName) {
       return res.status(400).json({ message: "School is required" });
     }
 
-    const existingSchool = await School.findOne({ name: school });
+    // Check if school exists
+    let school = await School.findOne({ name: schoolName });
 
-    if (existingSchool) {
+    if (school) {
       return res.status(400).json({
-        message: "School already registered. Please login.",
+        message: "School already exists. Please login.",
       });
     }
 
+    // Create school
+    school = await School.create({ name: schoolName });
+
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Create admin
     const admin = await User.create({
       name,
       email,
       password: hashedPassword,
       role: "admin",
-      school, // ✅ FIXED
-    });
-
-    const schoolDoc = await School.create({
-      name: school,
-      admin: admin._id,
+      school: school._id, // ✅ FIXED
     });
 
     res.status(201).json({
       message: "School registered successfully",
-      admin,
-      school: schoolDoc,
+      user: {
+        id: admin._id,
+        name: admin.name,
+        email: admin.email,
+        role: admin.role,
+        school: school.name,
+      },
+      token: generateToken(admin._id),
     });
 
   } catch (error) {
-    console.error("REGISTER ERROR:", error);
+    console.error(error);
     res.status(500).json({ message: error.message });
   }
 };
 
-export const checkAdminExists = async (req, res) => {
+//
+// =======================
+// LOGIN
+// =======================
+export const loginUser = async (req, res) => {
   try {
-    const admin = await User.findOne({ role: "admin" });
-    res.json({ exists: !!admin });
+    const { email, password, school: schoolName } = req.body;
+
+    if (!email || !password || !schoolName) {
+      return res.status(400).json({
+        message: "Email, password, and school are required",
+      });
+    }
+
+    // Find school
+    const school = await School.findOne({ name: schoolName });
+    if (!school) {
+      return res.status(400).json({ message: "School not found" });
+    }
+
+    // Find user inside that school
+    const user = await User.findOne({
+      email,
+      school: school._id,
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        message: "User not found in this school",
+      });
+    }
+
+    // Check password
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid password" });
+    }
+
+    res.json({
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        school: school.name,
+      },
+      token: generateToken(user._id),
+    });
+
   } catch (error) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: error.message });
   }
 };
 
+//
+// =======================
+// ADMIN CREATES USERS
+// =======================
+export const registerUser = async (req, res) => {
+  try {
+    const { name, email, password, role } = req.body;
 
-// import crypto from "crypto";
-// import User from "../models/User.js";
+    const existing = await User.findOne({
+      email,
+      school: req.user.school._id,
+    });
 
+    if (existing) {
+      return res.status(400).json({
+        message: "User already exists in this school",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      role,
+      school: req.user.school._id, // ✅ enforce school
+    });
+
+    res.json(user);
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+//
+// =======================
 // FORGOT PASSWORD
+// =======================
 export const forgotPassword = async (req, res) => {
   try {
     const user = await User.findOne({ email: req.body.email });
@@ -168,19 +169,23 @@ export const forgotPassword = async (req, res) => {
     const resetToken = crypto.randomBytes(20).toString("hex");
 
     user.resetToken = resetToken;
-    user.resetTokenExpire = Date.now() + 10 * 60 * 1000; // 10 mins
+    user.resetTokenExpire = Date.now() + 10 * 60 * 1000;
 
     await user.save();
 
     res.json({
       message: "Reset token generated",
-      token: resetToken, // later send via email
+      token: resetToken,
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
+//
+// =======================
+// RESET PASSWORD
+// =======================
 export const resetPassword = async (req, res) => {
   try {
     const { token, password } = req.body;
@@ -191,45 +196,22 @@ export const resetPassword = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(400).json({ message: "Invalid or expired token" });
+      return res.status(400).json({
+        message: "Invalid or expired token",
+      });
     }
 
-    user.password = password; // make sure hashing runs
+    // ✅ HASH PASSWORD
+    user.password = await bcrypt.hash(password, 10);
+
     user.resetToken = undefined;
     user.resetTokenExpire = undefined;
 
     await user.save();
 
     res.json({ message: "Password reset successful" });
+
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
-};
-
-// import School from "../models/School.js";
-// import User from "../models/User.js";
-
-export const registerSchool = async (req, res) => {
-  const { schoolName, adminName, email, password } = req.body;
-
-  // 1. Create school
-  const school = await School.create({
-    name: schoolName,
-    email,
-  });
-
-  // 2. Create admin linked to school
-  const admin = await User.create({
-    name: adminName,
-    email,
-    password,
-    role: "admin",
-    school: school._id,
-  });
-
-  res.json({
-    message: "School created successfully",
-    school,
-    admin,
-  });
 };

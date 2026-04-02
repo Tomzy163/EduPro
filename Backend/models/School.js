@@ -12,18 +12,13 @@
 // }, { timestamps: true });
 
 // export default mongoose.model("School", schoolSchema);
+// models/School.js
 import mongoose from "mongoose";
 
 const schoolSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-  },
-  email: String,
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
+  name: { type: String, required: true, unique: true },
 });
 
-export default mongoose.model("School", schoolSchema);
+const School = mongoose.model("School", schoolSchema);
+
+export default School;

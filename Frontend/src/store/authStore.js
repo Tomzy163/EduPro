@@ -1,22 +1,44 @@
+// store/authStore.js
 import { defineStore } from "pinia";
-import { login } from "../services/authService";
+import { login, register } from "../services/authService";
 
 export const useAuthStore = defineStore("auth", {
   state: () => ({
     user: JSON.parse(sessionStorage.getItem("user")) || null,
+    token: sessionStorage.getItem("token") || null,
   }),
 
   actions: {
-    async loginUser(credentials) {
-      const data = await login(credentials);
-      this.user = data;
+    async loginUser(data) {
+      try {
+        const res = await login(data);
 
-      sessionStorage.setItem("user", JSON.stringify(data)); // ✅ changed
+        this.user = res.user;
+        this.token = res.token;
+
+        // Save to sessionStorage
+        sessionStorage.setItem("user", JSON.stringify(res.user));
+        sessionStorage.setItem("token", res.token);
+
+        return res;
+      } catch (err) {
+        throw err.response?.data || { message: "Login failed" };
+      }
+    },
+
+    async registerUser(data) {
+      try {
+        const res = await register(data);
+        return res;
+      } catch (err) {
+        throw err.response?.data || { message: "Register failed" };
+      }
     },
 
     logout() {
       this.user = null;
-      sessionStorage.removeItem("user"); // ✅ changed
+      this.token = null;
+      sessionStorage.clear();
     },
   },
 });

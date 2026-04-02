@@ -22,26 +22,25 @@ const handleLogin = async () => {
     loading.value = true;
     error.value = "";
 
-    await auth.loginUser({
+    const res = await auth.loginUser({
       email: email.value,
       password: password.value,
-      school: school.value, // ✅ send school to backend
+      school: school.value,
     });
 
-    const role = auth.user.role;
+    const role = res.user.role;
 
-      if (role === "admin") router.push("/dashboard/admin");
+    if (role === "admin") router.push("/dashboard/admin");
     else if (role === "teacher") router.push("/dashboard/teacher");
     else if (role === "student") router.push("/dashboard/student");
     else if (role === "parent") router.push("/dashboard/parent");
 
   } catch (err) {
-    error.value = "Invalid email or password";
+    error.value = err.message || "Login failed";
   } finally {
     loading.value = false;
   }
 };
-
 // const adminExists = ref(true);
 
 // onMounted(async () => {

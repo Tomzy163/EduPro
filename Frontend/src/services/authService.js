@@ -1,14 +1,18 @@
 import API from "./api";
 
 // LOGIN
+// export const login = async (data) => {
+//   try {
+//     const res = await API.post("/auth/login", data);
+//     return res.data;
+//   } catch (error) {
+//     console.error("Login error:", error.response?.data || error.message);
+//     throw error;
+//   }
+// };
 export const login = async (data) => {
-  try {
-    const res = await API.post("/auth/login", data);
-    return res.data;
-  } catch (error) {
-    console.error("Login error:", error.response?.data || error.message);
-    throw error;
-  }
+  const res = await API.post("/auth/login", data);
+  return res.data;
 };
 
 // REGISTER
