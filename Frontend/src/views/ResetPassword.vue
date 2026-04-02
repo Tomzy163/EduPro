@@ -35,12 +35,12 @@ const submit = async () => {
 
       <p v-if="error" class="error">{{ error }}</p>
 
-      <input
+      <!-- <input
         v-model="token"
         type="text"
         placeholder="Token"
         class="input-field"
-      />
+      /> -->
             <input
         v-model="password"
         type="password"
