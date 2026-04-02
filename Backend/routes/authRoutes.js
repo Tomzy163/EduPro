@@ -17,7 +17,7 @@ const router = express.Router();
 // router.post("/login", loginUser);
 
 // ✅ ADD THESE
-router.post("/forgot-password", forgotPassword);
+// router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 
 // ----------------------
@@ -111,6 +111,25 @@ router.post("/login", async (req, res) => {
     console.error(err);
     res.status(500).json({ message: err.message });
   }
+});
+
+
+router.post("/forgot-password", async (req, res) => {
+  const { email } = req.body;
+
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  // generate token
+  const token = Math.random().toString(36).substring(2, 10);
+
+  user.resetToken = token;
+  await user.save();
+
+  res.json({ message: "Reset token generated", token });
 });
 
 export default router;

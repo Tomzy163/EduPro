@@ -1,24 +1,33 @@
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { resetPassword } from "../services/authService";
 
 const route = useRoute();
 
-const token = route.query.token; // ✅ from URL
+const token = ref("");
 const password = ref("");
 const loading = ref(false);
+
+// get token from URL
+onMounted(() => {
+  if (route.query.token) {
+    token.value = route.query.token;
+  }
+});
 
 const submit = async () => {
   try {
     loading.value = true;
 
     await resetPassword({
-      token,
+      token: token.value,
       password: password.value,
     });
 
-    alert("Password reset successful");
+    alert("Password reset successful ✅");
+
+    token.value = "";
     password.value = "";
   } catch (err) {
     alert(err.response?.data?.message || "Error resetting password");
