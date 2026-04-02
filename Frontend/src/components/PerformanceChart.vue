@@ -9,6 +9,17 @@ const props = defineProps({
 
 const canvasRef = ref(null);
 
+
+let chartInstance = null;
+
+onMounted(() => {
+  if (chartInstance) chartInstance.destroy();
+
+  chartInstance = new Chart(canvasRef.value, {
+    type: "bar",
+    data: { labels, datasets: [{ label: "Scores", data: scores, backgroundColor: "#3b82f6" }] },
+  });
+});
 onMounted(() => {
   if (props.results) {
     const labels = props.results.map(r => r.course?.name);

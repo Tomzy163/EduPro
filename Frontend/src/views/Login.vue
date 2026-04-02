@@ -36,7 +36,9 @@ const handleLogin = async () => {
     else if (role === "parent") router.push("/dashboard/parent");
 
   } catch (err) {
-    error.value = err.message || "Login failed";
+    if (err.message) error.value = err.message;
+  else if (err.msg) error.value = err.msg;
+  else error.value = "Login failed";
   } finally {
     loading.value = false;
   }

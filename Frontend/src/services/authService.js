@@ -10,8 +10,20 @@ import API from "./api";
 //     throw error;
 //   }
 // };
+// import API from "./api"; // ✅ ADD THIS
+
 export const login = async (data) => {
   const res = await API.post("/auth/login", data);
+  API.interceptors.response.use(
+  res => res,
+  err => {
+    if (err.response?.status === 401) {
+      sessionStorage.clear();
+      window.location.href = "/";
+    }
+    return Promise.reject(err);
+  }
+);
   return res.data;
 };
 

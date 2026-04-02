@@ -23,15 +23,20 @@ const handleRegister = async () => {
     error.value = "";
     success.value = "";
     
-    if (!schoolName.value) {
-  error.value = "School name is required";
-  return;
-}
+//     if (!schoolName.value) {
+//   error.value = "School name is required";
+//   return;
+// }
 
     if (!name.value || !email.value || !password.value || !schoolName.value) {
       error.value = "All fields are required";
       return;
     }
+
+    if (password.value.length < 6) {
+  error.value = "Password must be at least 6 characters";
+  return;
+}
 
     if (password.value !== confirmPassword.value) {
       error.value = "Passwords do not match";

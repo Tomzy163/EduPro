@@ -4,16 +4,22 @@ import { forgotPassword } from "../services/authService";
 
 const email = ref("");
 const token = ref("");
+const error = ref("");
+
+const loading = ref(false);
+
+loading.value = true;
+await forgotPassword(email.value);
+loading.value = false;
 
 const submit = async () => {
   try {
-    const res = await forgotPassword(email.value);
-    token.value = res.token;
+    await forgotPassword(email.value);
 
-    alert("Token: " + token.value); // later replace with email
+    alert("Password reset link sent to your email 📩");
     email.value = "";
   } catch (err) {
-    alert(err.response?.data?.message || "Error sending reset token");
+    alert(err.response?.data?.message || "Error sending reset link");
   }
 };
 </script>
@@ -23,6 +29,8 @@ const submit = async () => {
     <div class="forgot-card">
       <h2>Forgot Password</h2>
 
+      <p v-if="error" class="error">{{ error }}</p>
+
       <input
         v-model="email"
         type="email"
@@ -30,8 +38,8 @@ const submit = async () => {
         class="input-field"
       />
 
-      <button @click="submit" class="submit-btn">
-        Get Reset Token
+      <button :disabled="loading" @click="submit" class="submit-btn">
+        {{ loading ? "Sending..." : "Get Reset Link" }}
       </button>
     </div>
   </div>

@@ -56,14 +56,22 @@ io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
   socket.on("register", (userId) => {
+    if (!userId) return;
+
+    // Remove existing user if already connected
+    users = users.filter((u) => u.userId !== userId);
+
+    // Add new user
     users.push({ userId, socketId: socket.id });
+
+    console.log("Registered users:", users);
   });
 
   socket.on("disconnect", () => {
-    users = users.filter(u => u.socketId !== socket.id);
+    users = users.filter((u) => u.socketId !== socket.id);
+    console.log("User disconnected:", socket.id);
   });
 });
-
 export { io, users };
 
 // Test route

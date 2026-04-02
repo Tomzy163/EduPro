@@ -13,10 +13,11 @@ export const markAttendance = async (req, res) => {
       return res.status(403).json({ message: "Not your course" });
     }
 
-    const attendance = await Attendance.create({
+        const attendance = await Attendance.create({
       student,
       course,
       status,
+      school: req.user.school._id, // add school
     });
 
     res.json(attendance);

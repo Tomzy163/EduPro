@@ -11,6 +11,8 @@ const paymentChartRef = ref(null);
 
 const stats = ref({ students: 0, teachers: 0, parents: 0, totalPayments: 0, revenue: 0 });
 
+
+
 onMounted(async () => {
   users.value = await getUsers();
   payments.value = await getPayments();

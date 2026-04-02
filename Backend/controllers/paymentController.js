@@ -7,6 +7,7 @@ export const createPayment = async (req, res) => {
       user: req.user.id,
       amount: req.body.amount,
       receipt: req.file?.path,
+      school: req.user.school._id, // add school
     });
 
     res.json(payment);

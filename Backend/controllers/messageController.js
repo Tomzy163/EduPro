@@ -8,27 +8,27 @@ export const sendMessage = async (req, res) => {
   try {
     const { title, content, roleTarget } = req.body;
 
-    // Determine recipients
     let recipients = [];
+
     if (roleTarget === "all") {
-      recipients = await User.find({
-  role: roleTarget,
-  school: req.user.school // 🔥 CRITICAL
-});
+      // Send to all users in the same school
+      recipients = await User.find({ school: req.user.school }).select("_id");
     } else {
+      // Send to specific role
       recipients = await User.find({ role: roleTarget, school: req.user.school }).select("_id");
     }
 
-    // Create message in DB
+    // Save message in DB
     const message = await Message.create({
       title,
       content,
-      sender: req.user.id,
+      sender: req.user._id,
       recipients: recipients.map(u => u._id),
       roleTarget,
+      school: req.user.school._id,
     });
 
-    // 🔔 Send real-time notifications
+    // Emit via socket
     recipients.forEach(user => {
       const found = users.find(u => u.userId.toString() === user._id.toString());
       if (found) {

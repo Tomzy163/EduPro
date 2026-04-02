@@ -13,10 +13,15 @@ onMounted(async () => {
   unreadCount.value = messages.value.length;
 
   socket.emit("register", user._id);
+  
+  socket.on("register", (userId) => {
+  console.log("Received userId:", userId);
+});
 
-  socket.on("newMessage", (msg) => {
-    messages.value.unshift(msg);
-    unreadCount.value++;
+  socket.off("newMessage");
+  socket.on("newMessage", async () => {
+    messages.value = await getMessages();
+    unreadCount.value = messages.value.length;
   });
 });
 </script>

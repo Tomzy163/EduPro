@@ -24,6 +24,7 @@ export const uploadResult = async (req, res) => {
       score,
       grade,
       uploadedBy: req.user.id,
+      school: req.user.school._id, // add school
     });
 
     res.json(result);

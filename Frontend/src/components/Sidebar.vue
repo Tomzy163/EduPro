@@ -1,7 +1,8 @@
 <script setup>
 import { computed } from "vue";
 
-const user = JSON.parse(sessionStorage.getItem("user"));
+const storedUser = sessionStorage.getItem("user");
+const user = storedUser ? JSON.parse(storedUser) : null;
 
 const menu = computed(() => {
   if (!user) return [];

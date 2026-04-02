@@ -1,21 +1,29 @@
 <script setup>
 import { ref } from "vue";
+import { useRoute } from "vue-router";
 import { resetPassword } from "../services/authService";
 
-const token = ref("");
+const route = useRoute();
+
+const token = route.query.token; // ✅ from URL
 const password = ref("");
+const loading = ref(false);
 
 const submit = async () => {
   try {
+    loading.value = true;
+
     await resetPassword({
-      token: token.value,
+      token,
       password: password.value,
     });
+
     alert("Password reset successful");
-    token.value = "";
     password.value = "";
   } catch (err) {
     alert(err.response?.data?.message || "Error resetting password");
+  } finally {
+    loading.value = false;
   }
 };
 </script>
@@ -25,21 +33,22 @@ const submit = async () => {
     <div class="reset-card">
       <h2>Reset Password</h2>
 
+      <p v-if="error" class="error">{{ error }}</p>
+
       <input
         v-model="token"
         type="text"
         placeholder="Token"
         class="input-field"
       />
-      <input
+            <input
         v-model="password"
         type="password"
         placeholder="New Password"
-        class="input-field"
       />
 
-      <button @click="submit" class="submit-btn">
-        Reset Password
+      <button :disabled="loading" @click="submit" class="submit-btn">
+        {{ loading ? "Sending..." : "Get Reset Link" }}
       </button>
     </div>
   </div>

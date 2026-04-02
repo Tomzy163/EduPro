@@ -11,10 +11,10 @@ const route = useRoute();
     <!-- ❌ Hide on login/register pages -->
     <div v-if="route.path !== '/' && route.path !== '/register' && route.path !== '/forgot-password' && route.path !== '/reset-password'" class="flex">
       
-      <Sidebar />
+      <!-- <Sidebar /> -->
 
       <div class="flex-1 bg-gray-100 min-h-screen">
-        <Navbar />
+        <!-- <Navbar /> -->
 
         <div class="p-6">
           <router-view />

@@ -7,10 +7,14 @@ const auth = useAuthStore();
 <template>
   <div class="navbar">
     <div class="navbar-top">
-      <h1 class="app-title">EduPro</h1>
-      <span class="school-name">{{ auth.user?.school }}</span>
+      <h1 class="app-title"> 🎓 EduPro</h1>
+          <span class="school-name">
+      {{ auth.user?.school || "" }}
+    </span>
       <div class="user-actions">
-        <span class="welcome-msg">Hello, {{ auth.user.name }}</span>
+            <span class="welcome-msg">
+      Hello, {{ auth.user?.name || "User" }}
+    </span>
         <button class="logout-btn" @click="auth.logout()">Logout</button>
       </div>
     </div>
