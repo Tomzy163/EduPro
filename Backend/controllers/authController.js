@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import School from "../models/School.js";
+import nodemailer from "nodemailer";
 
 // Generate token
 const generateToken = (id) => {
@@ -166,30 +167,37 @@ export const forgotPassword = async (req, res) => {
   try {
     const { email, school } = req.body;
 
-    console.log("🔥 HIT forgot-password route");
-    console.log("📩 Email received:", email);
-
     const schoolDoc = await School.findOne({ name: school });
     if (!schoolDoc) return res.status(404).json({ message: "School not found" });
 
     const user = await User.findOne({ email, school: schoolDoc._id });
     if (!user) return res.status(404).json({ message: "User not found in this school" });
 
-    // Generate token
+    // Generate reset token
     const token = Math.random().toString(36).substring(2, 10);
     user.resetToken = token;
-    user.resetTokenExpire = Date.now() + 15 * 60 * 1000; // 15 minutes
+    user.resetTokenExpire = Date.now() + 15 * 60 * 1000; // 15 min
     await user.save();
 
-    // Send email
-    const resetUrl = `http://localhost:5173/reset-password?token=${token}`;
-    await sendEmail({
+    // Nodemailer setup
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
       to: user.email,
       subject: "Password Reset Link",
-      html: `<p>Click the link below to reset your password:</p>
-             <a href="${resetUrl}">${resetUrl}</a>
-             <p>This link expires in 15 minutes.</p>`,
-    });
+      text: `Hello ${user.name},\n\nClick this link to reset your password:\n
+      http://localhost:5173/reset-password?token=${token}\n
+      This link expires in 15 minutes.`,
+    };
+
+    await transporter.sendMail(mailOptions);
 
     res.json({ message: "Reset link sent to your email" });
 

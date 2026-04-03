@@ -9,10 +9,10 @@ const token = ref("");
 const loading = ref(false);
 
 const submit = async () => {
+   loading.value = true;
   try {
-    loading.value = true;
-      await forgotPassword(email.value, school.value); // send school
-    alert("Password reset link sent to your email 📩");
+    await forgotPassword({ email: email.value, school: school.value });
+    alert("Reset link sent to your email 📩");
     email.value = "";
     school.value = "";
   } catch (err) {
