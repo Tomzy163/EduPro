@@ -160,44 +160,43 @@ export const registerUser = async (req, res) => {
 // =======================
 // FORGOT PASSWORD
 // =======================
+// import School from "../models/School.js";
+
 export const forgotPassword = async (req, res) => {
-  // try {
-  //   const { email } = req.body;
+  try {
+    const { email, school } = req.body;
 
-  //   const user = await User.findOne({ email });
+    console.log("🔥 HIT forgot-password route");
+    console.log("📩 Email received:", email);
 
-  //   if (!user) {
-  //     return res.status(404).json({ message: "User not found" });
-  //   }
+    const schoolDoc = await School.findOne({ name: school });
+    if (!schoolDoc) return res.status(404).json({ message: "School not found" });
 
-  //   const token = Math.random().toString(36).substring(2, 10);
+    const user = await User.findOne({ email, school: schoolDoc._id });
+    if (!user) return res.status(404).json({ message: "User not found in this school" });
 
-  //   user.resetToken = token;
-  //   await user.save();
+    // Generate token
+    const token = Math.random().toString(36).substring(2, 10);
+    user.resetToken = token;
+    user.resetTokenExpire = Date.now() + 15 * 60 * 1000; // 15 minutes
+    await user.save();
 
-  //   res.json({ message: "Reset token generated", token });
-  // } catch (error) {
-  //   res.status(500).json({ message: error.message });
-  // }
-  const { email, school } = req.body;
+    // Send email
+    const resetUrl = `http://localhost:5173/reset-password?token=${token}`;
+    await sendEmail({
+      to: user.email,
+      subject: "Password Reset Link",
+      html: `<p>Click the link below to reset your password:</p>
+             <a href="${resetUrl}">${resetUrl}</a>
+             <p>This link expires in 15 minutes.</p>`,
+    });
 
-const schoolDoc = await School.findOne({ name: school });
+    res.json({ message: "Reset link sent to your email" });
 
-if (!schoolDoc) {
-  return res.status(404).json({ message: "School not found" });
-}
-
-const user = await User.findOne({
-  email,
-  school: schoolDoc._id,
-});
-
-const token = Math.random().toString(36).substring(2, 10);
-
-user.resetToken = token;
-user.resetTokenExpire = Date.now() + 15 * 60 * 1000; // 15 mins
-
-await user.save();
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
 };
 
 

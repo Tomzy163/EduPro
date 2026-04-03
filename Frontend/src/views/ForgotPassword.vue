@@ -3,23 +3,23 @@ import { ref } from "vue";
 import { forgotPassword } from "../services/authService";
 
 const email = ref("");
-const token = ref("");
 const error = ref("");
-
+const school = ref("");
+const token = ref("");
 const loading = ref(false);
-
-loading.value = true;
-await forgotPassword(email.value);
-loading.value = false;
 
 const submit = async () => {
   try {
-    await forgotPassword(email.value);
-
+    loading.value = true;
+      await forgotPassword(email.value, school.value); // send school
     alert("Password reset link sent to your email 📩");
     email.value = "";
+    school.value = "";
   } catch (err) {
-    alert(err.response?.data?.message || "Error sending reset link");
+    console.log("FULL ERROR:", err);
+    error.value = err.response?.data?.message || "Error sending reset link";
+  } finally {
+    loading.value = false;
   }
 };
 </script>
@@ -30,6 +30,13 @@ const submit = async () => {
       <h2>Forgot Password</h2>
 
       <p v-if="error" class="error">{{ error }}</p>
+
+            <input
+        v-model="school"
+        type="text"
+        placeholder="Enter your school name"
+        class="input-field"
+      />
 
       <input
         v-model="email"
@@ -57,7 +64,7 @@ const submit = async () => {
 
 .forgot-card {
   background-color: #ffffff;
-  padding: 40px 40px;
+  padding: 40px 45px;
   border-radius: 12px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
   width: 100%;

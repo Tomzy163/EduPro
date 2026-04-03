@@ -8,12 +8,13 @@ const user = JSON.parse(sessionStorage.getItem("user"));
 // Days & time slots
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 const times = [
-  "08:00-09:00",
-  "09:00-10:00",
-  "10:00-11:00",
-  "11:00-12:00",
-  "12:00-01:00",
-  "01:00-02:00"
+  "08:00am-09:00am",
+  "09:00am-10:00am",
+  "10:00am-11:00am",
+  "11:00am-12:00pm",
+  "12:00pm-01:00pm",
+  "01:00pm-02:00pm",
+  "02:00pm-03:00pm",
 ];
 
 // Fetch timetable
