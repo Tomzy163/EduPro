@@ -161,26 +161,45 @@ export const registerUser = async (req, res) => {
 // FORGOT PASSWORD
 // =======================
 export const forgotPassword = async (req, res) => {
-  try {
-    const user = await User.findOne({ email: req.body.email });
+  // try {
+  //   const { email } = req.body;
 
-    if (!user) return res.status(404).json({ message: "User not found" });
+  //   const user = await User.findOne({ email });
 
-    const resetToken = crypto.randomBytes(20).toString("hex");
+  //   if (!user) {
+  //     return res.status(404).json({ message: "User not found" });
+  //   }
 
-    user.resetToken = resetToken;
-    user.resetTokenExpire = Date.now() + 10 * 60 * 1000;
+  //   const token = Math.random().toString(36).substring(2, 10);
 
-    await user.save();
+  //   user.resetToken = token;
+  //   await user.save();
 
-    res.json({
-      message: "Reset token generated",
-      token: resetToken,
-    });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+  //   res.json({ message: "Reset token generated", token });
+  // } catch (error) {
+  //   res.status(500).json({ message: error.message });
+  // }
+  const { email, school } = req.body;
+
+const schoolDoc = await School.findOne({ name: school });
+
+if (!schoolDoc) {
+  return res.status(404).json({ message: "School not found" });
+}
+
+const user = await User.findOne({
+  email,
+  school: schoolDoc._id,
+});
+
+const token = Math.random().toString(36).substring(2, 10);
+
+user.resetToken = token;
+user.resetTokenExpire = Date.now() + 15 * 60 * 1000; // 15 mins
+
+await user.save();
 };
+
 
 //
 // =======================
@@ -190,28 +209,24 @@ export const resetPassword = async (req, res) => {
   try {
     const { token, password } = req.body;
 
-    const user = await User.findOne({
+    // const user = await User.findOne({ resetToken: token });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid token" });
+    }
+
+        const user = await User.findOne({
       resetToken: token,
       resetTokenExpire: { $gt: Date.now() },
     });
 
-    if (!user) {
-      return res.status(400).json({
-        message: "Invalid or expired token",
-      });
-    }
-
-    // ✅ HASH PASSWORD
-    user.password = await bcrypt.hash(password, 10);
-
-    user.resetToken = undefined;
-    user.resetTokenExpire = undefined;
+    user.password =  await bcrypt.hash(password, 10); // ⚠️ hash later if needed
+    user.resetToken = null;
 
     await user.save();
 
     res.json({ message: "Password reset successful" });
-
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };

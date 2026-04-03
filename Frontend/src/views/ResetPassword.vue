@@ -5,7 +5,7 @@ import { resetPassword } from "../services/authService";
 
 const route = useRoute();
 
-const token = ref("");
+// const token = ref("");
 const password = ref("");
 const loading = ref(false);
 

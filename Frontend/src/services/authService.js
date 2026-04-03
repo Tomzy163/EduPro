@@ -40,13 +40,7 @@ export const register = async (data) => {
 
 // FORGOT PASSWORD
 export const forgotPassword = async (email) => {
-  try {
-    const res = await API.post("/auth/forgot-password", { email });
-    return res.data;
-  } catch (error) {
-    console.error("Forgot password error:", error.response?.data);
-    throw error;
-  }
+  return axios.post("/api/auth/forgot-password", { email });
 };
 
 // RESET PASSWORD

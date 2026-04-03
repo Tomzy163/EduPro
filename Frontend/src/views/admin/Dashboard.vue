@@ -19,7 +19,7 @@ const payments = ref([]);
 
 const timetable = ref([]); // existing timetable
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-const times = ["08:00-09:00", "09:00-10:00", "10:00-11:00", "11:00-12:00"];
+const times = ["08:00am-09:00am", "09:00am-10:00am", "10:00am-11:00am", "11:00am-12:00pm", "12:00pm-01:00pm", "1:00pm-2:00pm", "2:00pm-3:00pm"];
 
 // ======================
 // TIMETABLE STATE
