@@ -36,7 +36,10 @@ export const uploadResult = async (req, res) => {
 // GET student results
 export const getStudentResults = async (req, res) => {
   try {
-    const results = await Result.find({ student: req.params.id })
+   const results = await Result.find({
+  student: req.params.id,
+  school: req.user.school._id,
+})
       .populate("course", "name term")
       .populate("uploadedBy", "name");
 

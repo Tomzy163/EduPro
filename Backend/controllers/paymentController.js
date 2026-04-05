@@ -20,7 +20,7 @@ export const createPayment = async (req, res) => {
 export const getPayments = async (req, res) => {
   try {
     const payments = await Payment.find({
-  school: req.user.school,
+  school: req.user.school._id,
 })
       .populate("user", "name email role");
 

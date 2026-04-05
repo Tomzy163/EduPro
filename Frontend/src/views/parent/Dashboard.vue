@@ -3,6 +3,10 @@ import { ref, onMounted } from "vue";
 import API from "../../services/api";
 import { createPayment } from "../../services/paymentService";
 import Notifications from "../../components/Notifications.vue";
+import socket from "@/socket";
+
+
+
 
 const children = ref([]);
 const selectedChild = ref("");
@@ -20,6 +24,12 @@ const fetchData = async () => {
   const parent = res.data.find(u => u._id === user._id);
   children.value = parent?.children || [];
 };
+onMounted(() => {
+  socket.on("message", (msg) => {
+    console.log(msg);
+    alert(msg.title);
+  });
+});
 
 // Get child results
 const getResults = async () => {

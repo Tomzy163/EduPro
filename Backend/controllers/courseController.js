@@ -9,7 +9,7 @@ export const createCourse = async (req, res) => {
     const course = await Course.create({
       name,
       term,
-      school: req.user.school, // ✅ correct here
+      school: req.user.school._id, // ✅ correct here
     });
 
     res.json(course);
@@ -21,7 +21,7 @@ export const createCourse = async (req, res) => {
 // GET ALL COURSES
 export const getCourses = async (req, res) => {
   try {
-    const courses = await Course.find({ school: req.user.school })
+    const courses = await Course.find({ school: req.user.school._id })
       .populate("teacher", "name email")
       .populate("students", "name email");
 
@@ -44,7 +44,9 @@ export const assignStudent = async (req, res) => {
     }
 
     // Add course to student
-    student.courses.push(courseId);
+    if (!student.courses.includes(courseId)) {
+  student.courses.push(courseId);
+}
     await student.save();
 
     // Add student to course
@@ -102,7 +104,7 @@ export const getStudentsWithCourses = async (req, res) => {
   try {
     const students = await User.find({
       role: "student",
-      school: req.user.school,
+      school: req.user.school._id,
     });
 
     const courses = await Course.find()
@@ -119,11 +121,11 @@ export const getTeachersWithCourses = async (req, res) => {
   try {
     const teachers = await User.find({
       role: "teacher",
-      school: req.user.school,
+      school: req.user.school._id,
     });
 
     const courses = await Course.find({
-      school: req.user.school,
+      school: req.user.school._id,
     }).populate("teacher");
 
     res.json({ teachers, courses });

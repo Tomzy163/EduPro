@@ -16,9 +16,5 @@ router.post("/login", loginUser);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 
-router.post("/forgot-password", (req, res, next) => {
-  console.log("🔥 HIT forgot-password route");
-  next();
-}, forgotPassword);
 
 export default router;

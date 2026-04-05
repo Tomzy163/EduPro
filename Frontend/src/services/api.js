@@ -4,14 +4,25 @@ const API = axios.create({
   baseURL: "http://localhost:5000/api",
 });
 
-API.interceptors.request.use((req) => {
-  const token = sessionStorage.getItem("token"); // ✅ FIX
-
+// Attach token
+API.interceptors.request.use((config) => {
+  const token = sessionStorage.getItem("token");
   if (token) {
-    req.headers.Authorization = `Bearer ${token}`;
+    config.headers.Authorization = `Bearer ${token}`;
   }
-
-  return req;
+  return config;
 });
+
+// 🔥 Handle errors globally
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      sessionStorage.clear();
+      window.location.href = "/"; // force logout
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default API;

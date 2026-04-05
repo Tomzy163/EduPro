@@ -37,8 +37,11 @@ export const protect = async (req, res, next) => {
     if (!user) {
       return res.status(401).json({ message: "User not found" });
     }
-
-    req.user = user;
+    const userId = req.user._id;
+    if (user._id !== userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    // req.user = user;
 
     next();
   } catch (error) {

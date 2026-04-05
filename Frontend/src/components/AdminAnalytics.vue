@@ -14,17 +14,25 @@ const stats = ref({ students: 0, teachers: 0, parents: 0, totalPayments: 0, reve
 
 
 onMounted(async () => {
+  try {
   users.value = await getUsers();
   payments.value = await getPayments();
+} catch (err) {
+  console.error(err);
+}
+  payments.value = await getPayments();
+
+   if (userChart) userChart.destroy();
+  if (paymentChart) paymentChart.destroy();
 
   stats.value.students = users.value.filter(u => u.role === "student").length;
   stats.value.teachers = users.value.filter(u => u.role === "teacher").length;
   stats.value.parents = users.value.filter(u => u.role === "parent").length;
 
   stats.value.totalPayments = payments.value.length;
-  stats.value.revenue = payments.value.filter(p => p.status === "approved").reduce((acc, p) => acc + p.amount, 0);
+  stats.value.revenue = payments.value.filter(p => p.status === "approved").reduce((acc, p) => acc + Number(p.amount), 0);
 
-  new Chart(userChartRef.value, {
+  userChart = new Chart(userChartRef.value, {
     type: "bar",
     data: {
       labels: ["Students", "Teachers", "Parents"],
@@ -32,7 +40,7 @@ onMounted(async () => {
     }
   });
 
-  new Chart(paymentChartRef.value, {
+   paymentChart = new Chart(paymentChartRef.value, {
     type: "doughnut",
     data: {
       labels: ["Approved", "Pending", "Rejected"],

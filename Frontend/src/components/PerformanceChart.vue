@@ -13,35 +13,24 @@ const canvasRef = ref(null);
 let chartInstance = null;
 
 onMounted(() => {
-  if (chartInstance) chartInstance.destroy();
+  if (!props.results) return;
 
-  chartInstance = new Chart(canvasRef.value, {
+  const labels = props.results.map(r => r.course?.name);
+  const scores = props.results.map(r => r.score);
+
+  new Chart(canvasRef.value, {
     type: "bar",
-    data: { labels, datasets: [{ label: "Scores", data: scores, backgroundColor: "#3b82f6" }] },
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Scores",
+          data: scores,
+          backgroundColor: "#3b82f6",
+        },
+      ],
+    },
   });
-});
-onMounted(() => {
-  if (props.results) {
-    const labels = props.results.map(r => r.course?.name);
-    const scores = props.results.map(r => r.score);
-
-    new Chart(canvasRef.value, {
-      type: "bar",
-      data: { labels, datasets: [{ label: "Scores", data: scores, backgroundColor: "#3b82f6" }] },
-      options: { responsive: true, plugins: { legend: { display: false } } }
-    });
-  }
-
-  if (props.attendance) {
-    const present = props.attendance.filter(a => a.status === "present").length;
-    const absent = props.attendance.filter(a => a.status === "absent").length;
-
-    new Chart(canvasRef.value, {
-      type: "pie",
-      data: { labels: ["Present", "Absent"], datasets: [{ data: [present, absent], backgroundColor: ["#10b981", "#ef4444"] }] },
-      options: { responsive: true }
-    });
-  }
 });
 </script>
 

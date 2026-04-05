@@ -45,7 +45,12 @@ const saveSlot = async () => {
 // Edit a slot
 const editSlot = (slot) => {
   editing.value = slot;
-  form.value = { ...slot };
+  form.value = {
+  day: slot.day,
+  time: slot.time,
+  course: slot.course?._id || slot.course,
+  teacher: slot.teacher?._id || slot.teacher,
+};
 };
 
 // Delete a slot
@@ -61,7 +66,9 @@ onMounted(fetchTimetable);
 // Get course for table cell
 const getCourse = (day, time) => {
   const slot = timetable.value.find(s => s.day === day && s.time === time);
-  return slot ? `${slot.course} (${slot.teacher})` : "";
+  return slot
+  ? `${slot.course?.name} (${slot.teacher?.name})`
+  : "";
 };
 </script>
 

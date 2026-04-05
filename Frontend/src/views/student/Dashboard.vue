@@ -6,6 +6,8 @@ import PerformanceChart from "../../components/PerformanceChart.vue";
 import AttendanceChart from "../../components/AttendanceChart.vue";
 import Notifications from "../../components/Notifications.vue";
 import UserTimetable from "../../components/UserTimetable.vue";
+import socket from "@/socket";
+
 
 const results = ref([]);
 const attendance = ref([]);
@@ -16,6 +18,12 @@ const fetchData = async () => {
   results.value = await getStudentResults(user._id);
   attendance.value = await getAttendance(user._id);
 };
+onMounted(() => {
+  socket.on("message", (msg) => {
+    console.log(msg);
+    alert(msg.title);
+  });
+});
 
 onMounted(fetchData);
 </script>
@@ -54,7 +62,8 @@ onMounted(fetchData);
           <tbody>
             <tr v-for="r in results" :key="r._id">
               <td>{{ r.course?.name }}</td>
-              <td>{{ r.status }}</td>
+              <td>{{ r.score }}</td>
+              <td>{{ r.grade }}</td>
               <td>{{ new Date(r.date).toLocaleDateString() }}</td>
             </tr>
           </tbody>

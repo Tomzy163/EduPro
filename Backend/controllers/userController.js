@@ -75,7 +75,7 @@ export const registerUser = async (req, res) => {
 export const getUsers = async (req, res) => {
   try {
     const users = await User.find({
-      school: req.user.school,
+      school: req.user.school._id,
     }).select("-password");
 
     res.json(users);
@@ -93,7 +93,7 @@ export const createUser = async (req, res) => {
 
     const existingUser = await User.findOne({
       email,
-      school: req.user.school,
+      school: req.user.school._id,
     });
 
     if (existingUser) {
@@ -107,7 +107,7 @@ export const createUser = async (req, res) => {
       email,
       password: hashedPassword,
       role, // ✅ use the role from frontend
-      school: req.user.school,
+      school: req.user.school._id,
     });
     res.status(201).json(user);
   } catch (error) {
@@ -272,7 +272,7 @@ export const getStudentsWithCourses = async (req, res) => {
   try {
     const students = await User.find({
       role: "student",
-      school: req.user.school,
+      school: req.user.school._id,
     })
       .populate("courses")
       .populate("teacher", "name email")
@@ -291,7 +291,7 @@ export const getTeachersWithCourses = async (req, res) => {
   try {
     const teachers = await User.find({
       role: "teacher",
-      school: req.user.school,
+      school: req.user.school._id,
     }).populate("courses");
 
     res.json(teachers);

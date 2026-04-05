@@ -1,9 +1,7 @@
 import API from "./api";
 
 export const createPayment = async (formData) => {
-  const res = await API.post("/payments", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  const res = await API.post("/payments", formData);
   return res.data;
 };
 

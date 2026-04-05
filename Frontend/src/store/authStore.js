@@ -2,6 +2,7 @@
 import { defineStore } from "pinia";
 import { login, register } from "../services/authService";
 import router from "../router"; // ✅ import router directly
+import { connectSocket } from "../services/socket";
 
 export const useAuthStore = defineStore("auth", {
   state: () => {
@@ -21,20 +22,35 @@ export const useAuthStore = defineStore("auth", {
   },
 
   actions: {
-    async loginUser(data) {
+async loginUser(data) {
   try {
     const res = await login(data);
 
-    this.user = res.user; // ✅ backend user object
+    this.user = res.user;
     this.token = res.token;
 
-    // Save to sessionStorage correctly
+    connectSocket(res.user.id);
     sessionStorage.setItem("user", JSON.stringify(res.user));
     sessionStorage.setItem("token", res.token);
 
+    // 🔥 Redirect based on role
+    switch (res.user.role) {
+      case "admin":
+        router.push("/dashboard/admin");
+        break;
+      case "teacher":
+        router.push("/dashboard/teacher");
+        break;
+      case "student":
+        router.push("/dashboard/student");
+        break;
+      case "parent":
+        router.push("/dashboard/parent");
+        break;
+    }
+
     return res;
   } catch (err) {
-    console.error("Login error:", err); // 🔥 log backend error
     throw err.response?.data || { message: "Login failed" };
   }
 },

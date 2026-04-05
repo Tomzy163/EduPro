@@ -6,11 +6,19 @@ import School from "../models/School.js";
 import nodemailer from "nodemailer";
 
 // Generate token
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: "7d",
-  });
+const generateToken = (user) => {
+  return jwt.sign(
+    { 
+      id: user._id,
+      role: user.role,
+      school: user.school
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
 };
+
+
 
 //
 // =======================
@@ -32,6 +40,7 @@ export const register = async (req, res) => {
         message: "School already exists. Please login.",
       });
     }
+    // token: generateToken(admin);
 
     // Create school
     school = await School.create({ name: schoolName });
@@ -42,7 +51,7 @@ export const register = async (req, res) => {
     // Create admin
     const admin = await User.create({
       name,
-      email,
+      email: email.toLowerCase(),
       password: hashedPassword,
       role: "admin",
       school: school._id, // ✅ FIXED
@@ -57,7 +66,7 @@ export const register = async (req, res) => {
         role: admin.role,
         school: school.name,
       },
-      token: generateToken(admin._id),
+      token: generateToken(admin),
     });
 
   } catch (error) {
@@ -88,7 +97,7 @@ export const loginUser = async (req, res) => {
 
     // Find user inside that school
     const user = await User.findOne({
-      email,
+      email: email.toLowerCase(),
       school: school._id,
     });
 
@@ -113,7 +122,7 @@ export const loginUser = async (req, res) => {
         role: user.role,
         school: school.name,
       },
-      token: generateToken(user._id),
+      token: generateToken(user),
     });
 
   } catch (error) {
@@ -174,7 +183,7 @@ export const forgotPassword = async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found in this school" });
 
     // Generate reset token
-    const token = Math.random().toString(36).substring(2, 10);
+    const token = crypto.randomBytes(32).toString("hex");
     user.resetToken = token;
     user.resetTokenExpire = Date.now() + 15 * 60 * 1000; // 15 min
     await user.save();
@@ -193,7 +202,7 @@ export const forgotPassword = async (req, res) => {
       to: user.email,
       subject: "Password Reset Link",
       text: `Hello ${user.name},\n\nClick this link to reset your password:\n
-      http://localhost:5173/reset-password?token=${token}\n
+     ${process.env.CLIENT_URL}/reset-password?token=${token}\n
       This link expires in 15 minutes.`,
     };
 
@@ -216,19 +225,18 @@ export const resetPassword = async (req, res) => {
   try {
     const { token, password } = req.body;
 
-    // const user = await User.findOne({ resetToken: token });
-
-    if (!user) {
-      return res.status(400).json({ message: "Invalid token" });
-    }
-
-        const user = await User.findOne({
+    const user = await User.findOne({
       resetToken: token,
       resetTokenExpire: { $gt: Date.now() },
     });
 
-    user.password =  await bcrypt.hash(password, 10); // ⚠️ hash later if needed
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired token" });
+    }
+
+    user.password = await bcrypt.hash(password, 10);
     user.resetToken = null;
+    user.resetTokenExpire = null;
 
     await user.save();
 

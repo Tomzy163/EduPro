@@ -1,5 +1,12 @@
 <script setup>
 import { useAuthStore } from "../store/authStore";
+// import { useRouter } from "vue-router";
+// const router = useRouter();
+
+// const logout = () => {
+//   auth.logout();
+//   router.push("/");
+// };
 
 const auth = useAuthStore();
 </script>
@@ -19,9 +26,9 @@ const auth = useAuthStore();
       </div>
     </div>
 
-    <div class="navbar-bottom">
+    <!-- <div class="navbar-bottom">
       <h1 class="dashboard-title">Dashboard</h1>
-    </div>
+    </div> -->
   </div>
 </template>
 
@@ -29,7 +36,7 @@ const auth = useAuthStore();
 .navbar {
   background-color: #ffffff;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  padding: 0.5rem 1rem;
+  padding: 1rem 2rem;
 }
 
 .navbar-top {
@@ -40,12 +47,16 @@ const auth = useAuthStore();
 }
 
 .app-title {
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   font-weight: bold;
 }
 
 .school-name {
-  font-size: 1rem;
+  font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+  font-weight: bolder;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 2rem;
   color: #555555;
 }
 
@@ -56,7 +67,7 @@ const auth = useAuthStore();
 
 .welcome-msg {
   margin-right: 1rem;
-  font-weight: 500;
+  font-weight: 800;
 }
 
 .logout-btn {

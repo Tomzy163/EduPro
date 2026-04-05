@@ -1,8 +1,12 @@
 <script setup>
 import { ref, onMounted } from "vue";
+import { computed } from "vue";
 
 import { getUsers, createUser, deleteUser } from "../../services/userService";
-import { sendMessage } from "../../services/messageService";
+import { useAuthStore } from "../../store/authStore";
+import socket from "@/socket";
+// import { onMessage } from "../services/socket";
+import Navbar from "@/components/Navbar.vue";
 import {
   getCourses,
   createCourse,
@@ -16,6 +20,8 @@ import API from "../../services/api";
 const users = ref([]);
 const courses = ref([]);
 const payments = ref([]);
+const notifications = ref([]);
+// const auth = useAuthStore();
 
 const timetable = ref([]); // existing timetable
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
@@ -78,7 +84,9 @@ const name = ref("");
 const email = ref("");
 const password = ref("");
 const role = ref("teacher");
-const schoolName = ref(localStorage.getItem("schoolName") || "");
+// const schoolName = ref(localStorage.getItem("schoolName") || "");
+const auth = useAuthStore();
+const schoolName = ref(auth.user?.school || "");
 
 // COURSE FORM
 const courseName = ref("");
@@ -95,6 +103,11 @@ const assignStudentId = ref("");
 const title = ref("");
 const content = ref("");
 const roleTarget = ref("student");
+const sentMessages = ref([]);
+const editingMessageId = ref(null);
+const editTitle = ref("");
+const editContent = ref("");
+// const schoolName = computed(() => auth.user?.school || " ")
 
 // Send announcement
 const send = async () => {
@@ -103,6 +116,50 @@ const send = async () => {
   alert("Message sent!");
   title.value = "";
   content.value = "";
+};
+
+
+
+// onMounted(() => {
+//   onMessage((msg) => {
+//     console.log("New message:", msg);
+//     alert(msg.title);
+//   });
+// });
+
+const deleteMsg = async (id) => {
+  if (confirm("Delete this message?")) {
+    await API.delete(`/messages/${id}`);
+    fetchSentMessages();
+  }
+};
+
+const clearAllMessages = async () => {
+  if (confirm("Delete all sent messages?")) {
+    await API.delete("/messages/clear/all");
+    fetchSentMessages();
+  }
+};
+
+const fetchSentMessages = async () => {
+  const res = await API.get("/messages/sent");
+  sentMessages.value = res.data;
+};
+
+const startEdit = (msg) => {
+  editingMessageId.value = msg._id;
+  editTitle.value = msg.title;
+  editContent.value = msg.content;
+};
+
+const updateMsg = async () => {
+  await API.put(`/messages/${editingMessageId.value}`, {
+    title: editTitle.value,
+    content: editContent.value,
+  });
+
+  editingMessageId.value = null;
+  fetchSentMessages();
 };
 
 // Save school
@@ -197,12 +254,19 @@ const approvePayment = async (id, status) => {
 
 onMounted(() => {
   fetchData();
+  fetchSentMessages();
   fetchPayments();
-  fetchTimetable(); // ✅ ADD THIS
+  fetchTimetable();
+
+  socket.on("message", (msg) => {
+    console.log("New message:", msg);
+    alert(msg.title);
+  });
 });
 </script>
 
 <template>
+  <Navbar />
   <div class="dashboard">
     <h1 class="page-title">Admin Dashboard</h1>
 
@@ -221,7 +285,7 @@ onMounted(() => {
     <!-- ANNOUNCEMENT -->
     <section class="card">
       <h2 class="section-title">Send Announcement</h2>
-      <input v-model="title" placeholder="Title" class="input mb-2"/>
+      <input v-model="title" placeholder="Title" class="input mb-2"/> 
       <textarea v-model="content" placeholder="Content" class="input mb-2"></textarea>
       <select v-model="roleTarget" class="input mb-2">
         <option value="student">Students</option>
@@ -230,7 +294,32 @@ onMounted(() => {
         <option value="all">All</option>
       </select>
       <button @click="send" class="btn btn-success">Send</button>
-    </section>
+      <!-- <section class="card"> -->
+  <h2 class="section-title">Message History</h2>
+
+  <button @click="clearAllMessages" class="btn btn-danger mb-2">
+    Clear All
+  </button>
+
+  <div v-for="msg in sentMessages" :key="msg._id" class="list-item">
+    
+    <div v-if="editingMessageId === msg._id">
+      <input v-model="editTitle" class="input mb-1" />
+      <textarea v-model="editContent" class="input mb-1"></textarea>
+      <button @click="updateMsg" class="btn btn-success btn-sm">Save</button>
+    </div>
+
+    <div v-else>
+      <strong>{{ msg.title }}</strong>
+      <p>{{ msg.content }}</p>
+
+      <button @click="startEdit(msg)" class="btn btn-primary btn-sm">Edit</button>
+      <button @click="deleteMsg(msg._id)" class="btn btn-danger btn-sm">Delete</button>
+    </div>
+
+  </div>
+</section>
+    <!-- </section> -->
 
     <!-- USERS -->
     <section class="card">
@@ -423,6 +512,7 @@ onMounted(() => {
   padding: 1rem;
   background: #f3f4f6;
   min-height: 100vh;
+  margin-top: 10px;
 }
 
 .page-title {

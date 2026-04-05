@@ -27,6 +27,8 @@ const fetchTimetable = async () => {
     timetable.value = res.data.filter(t =>
       !t.student || t.student?._id === user._id
     );
+  } else if (user.role === "parent") {
+    timetable.value = res.data; // or filter by children later
   }
 };
 

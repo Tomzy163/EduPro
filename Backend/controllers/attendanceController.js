@@ -29,7 +29,7 @@ export const markAttendance = async (req, res) => {
 // GET STUDENT ATTENDANCE
 export const getAttendance = async (req, res) => {
   try {
-    const records = await Attendance.find({ student: req.params.id, school: req.user.school })
+    const records = await Attendance.find({ student: req.params.id, school: req.user.school._id })
       .populate("course", "name");
 
     res.json(records);

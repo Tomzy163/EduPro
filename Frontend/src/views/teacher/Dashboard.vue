@@ -5,6 +5,8 @@ import { uploadResult } from "../../services/resultService";
 import { markAttendance } from "../../services/attendanceService";
 import Notifications from "../../components/Notifications.vue";
 import UserTimetable from "../../components/UserTimetable.vue";
+import socket from "@/socket";
+
 
 const courses = ref([]);
 const selectedCourse = ref("");
@@ -46,6 +48,13 @@ const submitAttendance = async () => {
   });
   alert("Attendance marked");
 };
+
+onMounted(() => {
+  socket.on("message", (msg) => {
+    console.log(msg);
+    alert(msg.title);
+  });
+});
 </script>
 
 <template>

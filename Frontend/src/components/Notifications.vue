@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { getMessages } from "../services/messageService";
-import socket from "../services/socket";
+import socket from "@/socket";
 
 const messages = ref([]);
 const unreadCount = ref(0);
@@ -19,10 +19,10 @@ onMounted(async () => {
 });
 
   socket.off("newMessage");
-  socket.on("newMessage", async () => {
-    messages.value = await getMessages();
-    unreadCount.value = messages.value.length;
-  });
+ socket.on("message", async () => {
+  messages.value = await getMessages();
+  unreadCount.value = messages.value.length;
+});
 });
 </script>
 

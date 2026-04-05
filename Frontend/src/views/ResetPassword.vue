@@ -5,7 +5,7 @@ import { resetPassword } from "../services/authService";
 
 const route = useRoute();
 
-// const token = ref("");
+const token = ref("");
 const password = ref("");
 const loading = ref(false);
 
@@ -27,7 +27,7 @@ const submit = async () => {
 
     alert("Password reset successful ✅");
 
-    token.value = "";
+    // token.value = "";
     password.value = "";
   } catch (err) {
     alert(err.response?.data?.message || "Error resetting password");

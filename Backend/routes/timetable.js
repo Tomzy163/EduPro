@@ -1,10 +1,11 @@
 import express from "express";
 import Timetable from "../models/Timetable.js";
+import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 // GET all timetable slots
-router.get("/", async (req, res) => {
+router.get("/", protect, async (req, res) => {
   try {
     const slots = await Timetable.find()
       .populate("course")
@@ -28,7 +29,7 @@ router.post("/", async (req, res) => {
 });
 
 // DELETE a slot
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", protect, async (req, res) => {
   try {
     await Timetable.findByIdAndDelete(req.params.id);
     res.json({ message: "Deleted" });
