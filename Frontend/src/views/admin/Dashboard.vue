@@ -4,7 +4,7 @@ import { computed } from "vue";
 
 import { getUsers, createUser, deleteUser } from "../../services/userService";
 import { useAuthStore } from "../../store/authStore";
-import { sendMessage } from "@/services/messageService";
+import { sendMessage, getMessages } from "@/services/messageService";
 import socket from "@/socket";
 // import { onMessage } from "../services/socket";
 import Navbar from "@/components/Navbar.vue";
@@ -108,59 +108,83 @@ const sentMessages = ref([]);
 const editingMessageId = ref(null);
 const editTitle = ref("");
 const editContent = ref("");
+const loading = ref(false);
+const messages = ref([]);
 // const schoolName = computed(() => auth.user?.school || " ")
 
-// Send announcement
+
+const parentId = ref("");
+const studentId = ref("");
+
+const linkParent = async () => {
+  try {
+    await API.post("/relationships/link", {
+      parentId: parentId.value,
+      studentId: studentId.value,
+    });
+
+    alert("Linked successfully");
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+// ======================
+// MESSAGES
+// ======================
+
+// Fetch messages
+const fetchMessages = async () => {
+  try {
+    messages.value = await getMessages(); 
+    console.log("MESSAGES:", messages.value); // debug
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+// Send message
 const send = async () => {
-  if (!title.value || !content.value) return alert("Please fill title & content");
-  await sendMessage({ title: title.value, content: content.value, roleTarget: roleTarget.value });
-  alert("Message sent!");
-  title.value = "";
-  content.value = "";
+  if (!title.value || !content.value) {
+    return alert("Please fill title & content");
+  }
+
+  try {
+    await sendMessage({
+      title: title.value,
+      content: content.value,
+      roleTarget: roleTarget.value,
+    });
+
+    alert("Message sent!");
+
+    title.value = "";
+    content.value = "";
+
+    fetchMessages(); // refresh
+  } catch (err) {
+    console.error(err);
+  }
 };
 
-
-
-// onMounted(() => {
-//   onMessage((msg) => {
-//     console.log("New message:", msg);
-//     alert(msg.title);
-//   });
-// });
-
+// Delete one
 const deleteMsg = async (id) => {
-  if (confirm("Delete this message?")) {
+  try {
     await API.delete(`/messages/${id}`);
-    fetchSentMessages();
+    fetchMessages();
+  } catch (err) {
+    console.error(err);
   }
 };
 
+// Delete all
 const clearAllMessages = async () => {
-  if (confirm("Delete all sent messages?")) {
+  try {
     await API.delete("/messages");
-    fetchSentMessages();
+    fetchMessages();
+  } catch (err) {
+    console.error(err);
   }
-};
-
-const fetchSentMessages = async () => {
-  const res = await API.get("/messages");
-  sentMessages.value = res.data;
-};
-
-const startEdit = (msg) => {
-  editingMessageId.value = msg._id;
-  editTitle.value = msg.title;
-  editContent.value = msg.content;
-};
-
-const updateMsg = async () => {
-  await API.put(`/messages/${editingMessageId.value}`, {
-    title: editTitle.value,
-    content: editContent.value,
-  });
-
-  editingMessageId.value = null;
-  fetchSentMessages();
 };
 
 // Save school
@@ -255,14 +279,14 @@ const approvePayment = async (id, status) => {
 
 onMounted(() => {
   fetchData();
-  fetchSentMessages();
+  fetchMessages();
   fetchPayments();
   fetchTimetable();
 
-  socket.on("message", (msg) => {
-    console.log("New message:", msg);
-    alert(msg.title);
-  });
+  socket.on("newMessage", (msg) => {
+  console.log("New message:", msg);
+  alert(msg.title);
+});
 });
 </script>
 
@@ -297,6 +321,16 @@ onMounted(() => {
       <button @click="send" class="btn btn-success">Send</button>
       <!-- <section class="card"> -->
   <h2 class="section-title">Message History</h2>
+
+  <div v-if="messages.length === 0">
+  <p>No messages yet</p>
+</div>
+
+<div v-for="msg in messages" :key="msg._id">
+  <h4>{{ msg.title }}</h4>
+  <p>{{ msg.content }}</p>
+  <small>{{ msg.sender?.name }}</small>
+</div>
 
   <button @click="clearAllMessages" class="btn btn-danger mb-2">
     Clear All
@@ -412,6 +446,25 @@ onMounted(() => {
         </ul>
       </div>
     </section>
+              <!-- link parent to students -->
+
+    <section class="card">
+              <select v-model="parentId" class="input mb-2">
+                <option disabled value="">Select Parent</option>
+              <option v-for="p in users.filter(u => u.role==='parent')" :value="p._id">
+                {{ p.name }}
+              </option>
+            </select>
+
+            <select v-model="studentId" class="input mb-2">
+              <option disabled value="">Select Student</option>
+              <option v-for="s in users.filter(u => u.role==='student')" :value="s._id">
+                {{ s.name }}
+              </option>
+            </select>
+
+            <button @click="linkParent"  class="btn btn-primary">Link</button>
+        </section>
 
 
     <section class="card">

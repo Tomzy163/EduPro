@@ -28,9 +28,6 @@ onMounted(async () => {
     console.error(err);
   }
 
-  if (userChart) userChart.destroy();
-  if (paymentChart) paymentChart.destroy();
-
   stats.value.students = users.value.filter(u => u.role === "student").length;
   stats.value.teachers = users.value.filter(u => u.role === "teacher").length;
   stats.value.parents = users.value.filter(u => u.role === "parent").length;
@@ -39,6 +36,10 @@ onMounted(async () => {
   stats.value.revenue = payments.value
     .filter(p => p.status === "approved")
     .reduce((acc, p) => acc + Number(p.amount), 0);
+
+  // destroy old charts safely
+  if (userChart) userChart.destroy();
+  if (paymentChart) paymentChart.destroy();
 
   userChart = new Chart(userChartRef.value, {
     type: "bar",

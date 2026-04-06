@@ -20,13 +20,13 @@ export const sendMessage = async (req, res) => {
 
     // Save message in DB
     const message = await Message.create({
-      title,
-      content,
-      sender: req.user._id,
-      recipients: recipients.map(u => u._id),
-      roleTarget,
-      school: req.user.school._id,
-    });
+  title,
+  content,
+  sender: req.user._id,
+  recipients: [...recipients.map(u => u._id), req.user._id], // ✅ FIX
+  roleTarget,
+  school: req.user.school._id,
+});
 
     // Emit via socket
     recipients.forEach(user => {
@@ -47,11 +47,17 @@ export const sendMessage = async (req, res) => {
 export const getMessages = async (req, res) => {
   try {
     const messages = await Message.find({
-      recipients: req.user.id,        // Only messages for this user
+      recipients: req.user._id,        // Only messages for this user
       school: req.user.school._id,        // Only messages in same school
     })
       .populate("sender", "name email")
       .sort({ createdAt: -1 });
+      const messages = await Message.find({
+  recipients: req.user._id,   // ✅ FIXED
+  school: req.user.school._id,
+})
+.populate("sender", "name email")
+.sort({ createdAt: -1 });
 
     res.json(messages);
   } catch (error) {
@@ -70,7 +76,7 @@ export const deleteMessage = async (req, res) => {
     }
 
     // Optional: ensure admin can only delete messages from their school
-    if (message.school.toString() !== req.user.school.toString()) {
+    if (message.school.toString() !== req.user.school._id.toString()) {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
