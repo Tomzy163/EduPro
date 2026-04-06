@@ -4,6 +4,7 @@ import {
   getPayments,
   updatePaymentStatus,
 } from "../controllers/paymentController.js";
+import { getUsers } from "../controllers/userController.js";
 
 import { protect } from "../middleware/authMiddleware.js";
 import { authorize } from "../middleware/roleMiddleware.js";
@@ -29,5 +30,7 @@ router.put(
   authorize("admin"),
   updatePaymentStatus
 );
+router.get("/users", protect, getUsers);
+router.get("/payments", protect, getPayments);
 
 export default router;

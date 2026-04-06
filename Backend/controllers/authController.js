@@ -80,17 +80,39 @@ export const register = async (req, res) => {
 // LOGIN
 // =======================
 export const loginUser = async (req, res) => {
+      sessionStorage.clear();
   try {
+
+    connectSocket(res.data.user.id);
+
+// ✅ ADD THIS
+switch (res.data.user.role) {
+  case "admin":
+    router.push("/dashboard/admin");
+    break;
+  case "teacher":
+    router.push("/dashboard/teacher");
+    break;
+  case "student":
+    router.push("/dashboard/student");
+    break;
+  case "parent":
+    router.push("/dashboard/parent");
+    break;
+}
+    
     const { email, password, school: schoolName } = req.body;
 
-    if (!email || !password || !schoolName) {
-      return res.status(400).json({
-        message: "Email, password, and school are required",
-      });
+        if (!email.value || !password.value || !school.value) {
+            error.value = "All fields are required";
+            loading.value = false;
+            return;
     }
 
     // Find school
-    const school = await School.findOne({ name: schoolName });
+    const school = await School.findOne({
+  name: { $regex: `^${schoolName}$`, $options: "i" }
+});
     if (!school) {
       return res.status(400).json({ message: "School not found" });
     }

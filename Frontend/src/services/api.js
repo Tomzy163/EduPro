@@ -7,6 +7,8 @@ const API = axios.create({
 // Attach token
 API.interceptors.request.use((config) => {
   const token = sessionStorage.getItem("token");
+
+   console.log("TOKEN BEING SENT:", token);
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -18,8 +20,9 @@ API.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      sessionStorage.clear();
-      window.location.href = "/"; // force logout
+      console.log("401 ERROR:", error.response.data);
+      // sessionStorage.clear();
+      // window.location.href = "/"; // force logout
     }
     return Promise.reject(error);
   }

@@ -32,16 +32,14 @@ export const protect = async (req, res, next) => {
 
     const user = await User.findById(decoded.id)
       .select("-password")
-      .populate("school"); // ✅ VERY IMPORTANT
+      .populate("school");
 
     if (!user) {
       return res.status(401).json({ message: "User not found" });
     }
-    const userId = req.user._id;
-    if (user._id !== userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-    // req.user = user;
+
+    // ✅ FIX: attach user to request
+    req.user = user;
 
     next();
   } catch (error) {

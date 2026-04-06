@@ -18,31 +18,41 @@ const router = useRouter();
 const auth = useAuthStore();
 
 const handleLogin = async () => {
+  if (loading.value) return; // 🚫 prevent multiple calls
+
   try {
     loading.value = true;
     error.value = "";
 
-    const res = await auth.loginUser({
+    console.log("Login payload:", {
       email: email.value,
       password: password.value,
       school: school.value,
     });
 
-    const role = res.user.role;
+          const res = await auth.loginUser({
+        email: email.value,
+        password: password.value,
+        school: school.value,
+      });
 
-    if (role === "admin") router.push("/dashboard/admin");
-    else if (role === "teacher") router.push("/dashboard/teacher");
-    else if (role === "student") router.push("/dashboard/student");
-    else if (role === "parent") router.push("/dashboard/parent");
+      console.log("LOGIN SUCCESS:", res);
+
+      // ✅ redirect AFTER login
+      const role = res.user.role;
+
+      if (role === "admin") router.push("/dashboard/admin");
+      else if (role === "teacher") router.push("/dashboard/teacher");
+      else if (role === "student") router.push("/dashboard/student");
+      else if (role === "parent") router.push("/dashboard/parent");
 
   } catch (err) {
-    if (err.message) error.value = err.message;
-  else if (err.msg) error.value = err.msg;
-  else error.value = "Login failed";
+    console.log("FULL ERROR:", err);
+    error.value = err.message || "Login failed";
   } finally {
     loading.value = false;
   }
-};
+};;
 // const adminExists = ref(true);
 
 // onMounted(async () => {
@@ -92,7 +102,7 @@ const handleLogin = async () => {
       <!-- SCHOOL NAME -->
           <div class="mb-4">
       <label class="block text-sm mb-1">School</label>
-      <input
+      <input name="school"
         v-model="school"
         placeholder="Enter your school name"
         class="input"
@@ -102,7 +112,7 @@ const handleLogin = async () => {
       <!-- EMAIL -->
       <div class="form-group">
         <label>Email</label>
-        <input v-model="email" type="email" placeholder="Enter your email" />
+        <input v-model="email" type="email" name="email" placeholder="Enter your email" />
       </div>
 
       <!-- PASSWORD -->
@@ -127,7 +137,7 @@ const handleLogin = async () => {
       </div>
 
       <!-- BUTTON -->
-      <button @click="handleLogin" class="login-btn">
+      <button type="button" @click="handleLogin" class="login-btn">
         <span v-if="!loading">Login</span>
         <span v-else class="loader"></span>
       </button>

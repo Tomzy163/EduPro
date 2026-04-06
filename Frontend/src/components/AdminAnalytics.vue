@@ -9,20 +9,26 @@ const payments = ref([]);
 const userChartRef = ref(null);
 const paymentChartRef = ref(null);
 
-const stats = ref({ students: 0, teachers: 0, parents: 0, totalPayments: 0, revenue: 0 });
+let userChart = null;
+let paymentChart = null;
 
-
+const stats = ref({
+  students: 0,
+  teachers: 0,
+  parents: 0,
+  totalPayments: 0,
+  revenue: 0
+});
 
 onMounted(async () => {
   try {
-  users.value = await getUsers();
-  payments.value = await getPayments();
-} catch (err) {
-  console.error(err);
-}
-  payments.value = await getPayments();
+    users.value = await getUsers();
+    payments.value = await getPayments();
+  } catch (err) {
+    console.error(err);
+  }
 
-   if (userChart) userChart.destroy();
+  if (userChart) userChart.destroy();
   if (paymentChart) paymentChart.destroy();
 
   stats.value.students = users.value.filter(u => u.role === "student").length;
@@ -30,17 +36,26 @@ onMounted(async () => {
   stats.value.parents = users.value.filter(u => u.role === "parent").length;
 
   stats.value.totalPayments = payments.value.length;
-  stats.value.revenue = payments.value.filter(p => p.status === "approved").reduce((acc, p) => acc + Number(p.amount), 0);
+  stats.value.revenue = payments.value
+    .filter(p => p.status === "approved")
+    .reduce((acc, p) => acc + Number(p.amount), 0);
 
   userChart = new Chart(userChartRef.value, {
     type: "bar",
     data: {
       labels: ["Students", "Teachers", "Parents"],
-      datasets: [{ label: "Users", data: [stats.value.students, stats.value.teachers, stats.value.parents], backgroundColor: "#3b82f6" }]
+      datasets: [{
+        label: "Users",
+        data: [
+          stats.value.students,
+          stats.value.teachers,
+          stats.value.parents
+        ]
+      }]
     }
   });
 
-   paymentChart = new Chart(paymentChartRef.value, {
+  paymentChart = new Chart(paymentChartRef.value, {
     type: "doughnut",
     data: {
       labels: ["Approved", "Pending", "Rejected"],
@@ -49,8 +64,7 @@ onMounted(async () => {
           payments.value.filter(p => p.status === "approved").length,
           payments.value.filter(p => p.status === "pending").length,
           payments.value.filter(p => p.status === "rejected").length
-        ],
-        backgroundColor: ["#10b981", "#fbbf24", "#ef4444"]
+        ]
       }]
     }
   });

@@ -4,6 +4,7 @@ import { computed } from "vue";
 
 import { getUsers, createUser, deleteUser } from "../../services/userService";
 import { useAuthStore } from "../../store/authStore";
+import { sendMessage } from "@/services/messageService";
 import socket from "@/socket";
 // import { onMessage } from "../services/socket";
 import Navbar from "@/components/Navbar.vue";
@@ -136,13 +137,13 @@ const deleteMsg = async (id) => {
 
 const clearAllMessages = async () => {
   if (confirm("Delete all sent messages?")) {
-    await API.delete("/messages/clear/all");
+    await API.delete("/messages");
     fetchSentMessages();
   }
 };
 
 const fetchSentMessages = async () => {
-  const res = await API.get("/messages/sent");
+  const res = await API.get("/messages");
   sentMessages.value = res.data;
 };
 
