@@ -47,17 +47,11 @@ export const sendMessage = async (req, res) => {
 export const getMessages = async (req, res) => {
   try {
     const messages = await Message.find({
-      recipients: req.user._id,        // Only messages for this user
-      school: req.user.school._id,        // Only messages in same school
+      recipients: req.user._id,
+      school: req.user.school._id,
     })
       .populate("sender", "name email")
       .sort({ createdAt: -1 });
-      const messages = await Message.find({
-  recipients: req.user._id,   // ✅ FIXED
-  school: req.user.school._id,
-})
-.populate("sender", "name email")
-.sort({ createdAt: -1 });
 
     res.json(messages);
   } catch (error) {

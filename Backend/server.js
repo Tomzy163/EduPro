@@ -10,6 +10,7 @@ import attendanceRoutes from "./routes/attendanceRoutes.js";
 import timetableRoutes from "./routes/timetable.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
+import relationshipRoutes from "./routes/relationshipRoutes.js";
 import { Server } from "socket.io";
 import http from "http";
 
@@ -30,6 +31,7 @@ app.use("/api/attendance", attendanceRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/timetable", timetableRoutes);
+app.use("/api/relationships", relationshipRoutes);
 // app.get("/test", (req, res) => {
 //   res.send("Test route works");
 // });
@@ -39,6 +41,7 @@ app.use("/api/timetable", timetableRoutes);
 // app.use(cors({
 //   origin: "https://your-app.netlify.app"
 // }));
+console.log("Relationship routes loaded");
 // 
 
 const server = http.createServer(app);
