@@ -116,6 +116,7 @@ const messages = ref([]);
 const parentId = ref("");
 const studentId = ref("");
 const history = ref([]);
+const selectedParentData = ref(null);
 
 const linkParent = async () => {
   try {
@@ -130,21 +131,46 @@ const linkParent = async () => {
   }
 };
 
-const fetchHistory = async () => {
-  try {
-    const res = await API.get("/relationships/history");
-    history.value = res.data;
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-const selectedParentData = ref(null);
+// const fetchHistory = async () => {
+//   try {
+//     const res = await API.get("/relationships/history");
+//     history.value = res.data;
+//   } catch (err) {
+//     console.error(err);
+//   }
+// };
 
 const fetchParentChildren = async () => {
   const res = await API.get(`/relationships/parent/${parentId.value}`);
   selectedParentData.value = res.data;
 };
+
+const fetchHistory = async () => {
+  const res = await API.get("/relationships/history");
+  history.value = res.data;
+};
+
+const removeLink = async (id) => {
+  await API.delete(`/relationships/${id}`);
+  fetchHistory();
+};
+
+const startEdit = (link) => {
+  editId.value = link._id;
+  editParent.value = link.parent._id;
+  editStudent.value = link.student._id;
+};
+
+const updateLink = async () => {
+  await API.put(`/relationships/${editId.value}`, {
+    parentId: editParent.value,
+    studentId: editStudent.value,
+  });
+
+  editId.value = null;
+  fetchHistory();
+};
+
 // ======================
 // MESSAGES
 // ======================
@@ -488,23 +514,38 @@ onMounted(() => {
 
         <h2>Link History</h2>
 
-        <div v-for="h in history" :key="h._id">
-          <p>
-            Parent: {{ h.parent?.name }} →
-            Student: {{ h.student?.name }}
-            (by {{ h.linkedBy?.name }})
-          </p>
-        </div>
+          <button @click="fetchHistory" class="btn btn-primary">Refresh</button>
+          <button @click="API.delete('/relationships').then(fetchHistory)" class="btn btn-danger">
+            Delete All
+          </button>
 
-        <button @click="fetchParentChildren">View Children</button>
+          <div v-for="h in history" :key="h._id">
 
-          <div v-if="selectedParentData">
-            <h3>Children:</h3>
-            <ul>
-              <li v-for="c in selectedParentData.children" :key="c._id">
-                {{ c.name }}
-              </li>
-            </ul>
+            <div v-if="editId === h._id">
+              <select v-model="editParent">
+                <option v-for="u in users.filter(u => u.role==='parent')" :value="u._id">
+                  {{ u.name }}
+                </option>
+              </select>
+
+              <select v-model="editStudent">
+                <option v-for="u in users.filter(u => u.role==='student')" :value="u._id">
+                  {{ u.name }}
+                </option>
+              </select>
+
+              <button @click="updateLink" class="btn btn-primary">Save</button>
+            </div>
+
+            <div v-else>
+              <p>
+                {{ h.parent?.name }} → {{ h.student?.name }}
+              </p>
+
+              <button @click="startEdit(h)" class="btn btn-primary">Edit</button>
+              <button @click="removeLink(h._id)" class="btn btn-danger">Delete</button>
+            </div>
+
           </div>
         </section>
 

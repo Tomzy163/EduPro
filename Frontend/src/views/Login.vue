@@ -15,69 +15,44 @@ const loading = ref(false);
 const error = ref("");
 const school = ref("");
 
+const history = ref([]);
+const editId = ref(null);
+const editParent = ref("");
+const editStudent = ref("");
+
 const router = useRouter();
 const auth = useAuthStore();
 
 const handleLogin = async () => {
-  if (loading.value) return; // 🚫 prevent multiple calls
+  if (loading.value) return;
 
   try {
     loading.value = true;
     error.value = "";
 
-    console.log("Login payload:", {
+    const res = await auth.loginUser({
       email: email.value,
       password: password.value,
       school: school.value,
     });
 
-          const res = await auth.loginUser({
-        email: email.value,
-        password: password.value,
-        school: school.value,
-      });
+    console.log("LOGIN SUCCESS:", res);
 
-      console.log("LOGIN SUCCESS:", res);
-
-      // ✅ redirect AFTER login
-      // const role = res.user.role;
-
-      // if (role === "admin") router.push("/dashboard/admin");
-      // else if (role === "teacher") router.push("/dashboard/teacher");
-      // else if (role === "student") router.push("/dashboard/student");
-      // else if (role === "parent") router.push("/dashboard/parent");
-
-      sessionStorage.clear();
-
-      connectSocket(res.data.user.id);
-      switch (res.data.user.role) {
-        case "admin":
-          router.push("/dashboard/admin");
-          break;
-        case "teacher":
-          router.push("/dashboard/teacher");
-          break;
-        case "student":
-          router.push("/dashboard/student");
-          break;
-        case "parent":
-          router.push("/dashboard/parent");
-          break;
-      }
-      switch (user.role) {
-        case "admin":
-          router.push("/dashboard/admin");
-          break;
-        case "teacher":
-          router.push("/dashboard/teacher");
-          break;
-        case "student":
-          router.push("/dashboard/student");
-          break;
-        case "parent":
-          router.push("/dashboard/parent");
-          break;
-      }
+    // ✅ Redirect only
+    switch (res.user.role) {
+      case "admin":
+        router.push("/dashboard/admin");
+        break;
+      case "teacher":
+        router.push("/dashboard/teacher");
+        break;
+      case "student":
+        router.push("/dashboard/student");
+        break;
+      case "parent":
+        router.push("/dashboard/parent");
+        break;
+    }
 
   } catch (err) {
     console.log("FULL ERROR:", err);
@@ -85,7 +60,7 @@ const handleLogin = async () => {
   } finally {
     loading.value = false;
   }
-};;
+};
 
 // const adminExists = ref(true);
 

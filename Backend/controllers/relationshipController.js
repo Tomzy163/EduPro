@@ -79,3 +79,97 @@ export const getLinkHistory = async (req, res) => {
 
   res.json(history);
 };
+// DELETE SINGLE LINK
+export const deleteLink = async (req, res) => {
+  try {
+    const link = await ParentStudentLink.findById(req.params.id);
+
+    if (!link) {
+      return res.status(404).json({ message: "Link not found" });
+    }
+
+    // remove from users too
+    await User.findByIdAndUpdate(link.parent, {
+      $pull: { children: link.student },
+    });
+
+    await User.findByIdAndUpdate(link.student, {
+      $pull: { parents: link.parent },
+    });
+
+    await link.deleteOne();
+
+    res.json({ message: "Link deleted" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+// DELETE ALL LINKS
+export const deleteAllLinks = async (req, res) => {
+  try {
+    const links = await ParentStudentLink.find({
+      school: req.user.school._id,
+    });
+
+    for (let link of links) {
+      await User.findByIdAndUpdate(link.parent, {
+        $pull: { children: link.student },
+      });
+
+      await User.findByIdAndUpdate(link.student, {
+        $pull: { parents: link.parent },
+      });
+    }
+
+    await ParentStudentLink.deleteMany({
+      school: req.user.school._id,
+    });
+
+    res.json({ message: "All links deleted" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+// UPDATE LINK
+export const updateLink = async (req, res) => {
+  try {
+    const { parentId, studentId } = req.body;
+
+    const link = await ParentStudentLink.findById(req.params.id);
+
+    if (!link) {
+      return res.status(404).json({ message: "Link not found" });
+    }
+
+    // remove old relation
+    await User.findByIdAndUpdate(link.parent, {
+      $pull: { children: link.student },
+    });
+
+    await User.findByIdAndUpdate(link.student, {
+      $pull: { parents: link.parent },
+    });
+
+    // add new relation
+    await User.findByIdAndUpdate(parentId, {
+      $addToSet: { children: studentId },
+    });
+
+    await User.findByIdAndUpdate(studentId, {
+      $addToSet: { parents: parentId },
+    });
+
+    link.parent = parentId;
+    link.student = studentId;
+
+    await link.save();
+
+    res.json({ message: "Link updated" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
