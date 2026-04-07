@@ -5,6 +5,10 @@ export const linkParentToStudent = async (req, res) => {
   try {
     const { parentId, studentId } = req.body;
 
+    if (!parentId || !studentId) {
+      return res.status(400).json({ message: "Missing IDs" });
+    }
+
     const parent = await User.findById(parentId);
     const student = await User.findById(studentId);
 
@@ -15,6 +19,10 @@ export const linkParentToStudent = async (req, res) => {
     if (!student || student.role !== "student") {
       return res.status(400).json({ message: "Invalid student" });
     }
+
+    // ✅ FIX: initialize arrays
+    parent.children = parent.children || [];
+    student.parents = student.parents || [];
 
     // ✅ prevent duplicates
     if (parent.children.includes(studentId)) {
@@ -39,8 +47,11 @@ export const linkParentToStudent = async (req, res) => {
     res.json({ message: "Parent linked to student" });
 
   } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+  console.error("🔥 LINK ERROR FULL:", error);
+  console.error("🔥 BODY:", req.body);
+  console.error("🔥 USER:", req.user);
+  res.status(500).json({ message: error.message });
+}
 };
 
 export const getParentWithChildren = async (req, res) => {

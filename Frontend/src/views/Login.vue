@@ -5,6 +5,7 @@ import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../store/authStore";
 import API from "../services/api";
+import socket, { connectSocket } from "@/socket";
 
 const email = ref("");
 const password = ref("");
@@ -39,12 +40,44 @@ const handleLogin = async () => {
       console.log("LOGIN SUCCESS:", res);
 
       // ✅ redirect AFTER login
-      const role = res.user.role;
+      // const role = res.user.role;
 
-      if (role === "admin") router.push("/dashboard/admin");
-      else if (role === "teacher") router.push("/dashboard/teacher");
-      else if (role === "student") router.push("/dashboard/student");
-      else if (role === "parent") router.push("/dashboard/parent");
+      // if (role === "admin") router.push("/dashboard/admin");
+      // else if (role === "teacher") router.push("/dashboard/teacher");
+      // else if (role === "student") router.push("/dashboard/student");
+      // else if (role === "parent") router.push("/dashboard/parent");
+
+      sessionStorage.clear();
+
+      connectSocket(res.data.user.id);
+      switch (res.data.user.role) {
+        case "admin":
+          router.push("/dashboard/admin");
+          break;
+        case "teacher":
+          router.push("/dashboard/teacher");
+          break;
+        case "student":
+          router.push("/dashboard/student");
+          break;
+        case "parent":
+          router.push("/dashboard/parent");
+          break;
+      }
+      switch (user.role) {
+        case "admin":
+          router.push("/dashboard/admin");
+          break;
+        case "teacher":
+          router.push("/dashboard/teacher");
+          break;
+        case "student":
+          router.push("/dashboard/student");
+          break;
+        case "parent":
+          router.push("/dashboard/parent");
+          break;
+      }
 
   } catch (err) {
     console.log("FULL ERROR:", err);
@@ -53,6 +86,7 @@ const handleLogin = async () => {
     loading.value = false;
   }
 };;
+
 // const adminExists = ref(true);
 
 // onMounted(async () => {

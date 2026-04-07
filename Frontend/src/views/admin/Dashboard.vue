@@ -115,6 +115,7 @@ const messages = ref([]);
 
 const parentId = ref("");
 const studentId = ref("");
+const history = ref([]);
 
 const linkParent = async () => {
   try {
@@ -129,6 +130,21 @@ const linkParent = async () => {
   }
 };
 
+const fetchHistory = async () => {
+  try {
+    const res = await API.get("/relationships/history");
+    history.value = res.data;
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+const selectedParentData = ref(null);
+
+const fetchParentChildren = async () => {
+  const res = await API.get(`/relationships/parent/${parentId.value}`);
+  selectedParentData.value = res.data;
+};
 // ======================
 // MESSAGES
 // ======================
@@ -282,6 +298,7 @@ onMounted(() => {
   fetchMessages();
   fetchPayments();
   fetchTimetable();
+  fetchHistory();
 
   socket.on("newMessage", (msg) => {
   console.log("New message:", msg);
@@ -449,21 +466,46 @@ onMounted(() => {
               <!-- link parent to students -->
 
     <section class="card">
-              <select v-model="parentId" class="input mb-2">
-                <option disabled value="">Select Parent</option>
-              <option v-for="p in users.filter(u => u.role==='parent')" :value="p._id">
-                {{ p.name }}
-              </option>
-            </select>
+              <<h2>Link Parent to Student</h2>
 
-            <select v-model="studentId" class="input mb-2">
-              <option disabled value="">Select Student</option>
-              <option v-for="s in users.filter(u => u.role==='student')" :value="s._id">
-                {{ s.name }}
-              </option>
-            </select>
+        <select v-model="parentId" class="input">
+          <option disabled value="">Select Parent</option>
+          <option v-for="u in users.filter(u => u.role === 'parent')" :key="u._id" :value="u._id">
+            {{ u.name }}
+          </option>
+        </select>
 
-            <button @click="linkParent"  class="btn btn-primary">Link</button>
+        <select v-model="studentId" class="input">
+          <option disabled value="">Select Student</option>
+          <option v-for="u in users.filter(u => u.role === 'student')" :key="u._id" :value="u._id">
+            {{ u.name }}
+          </option>
+        </select>
+
+        <button @click="linkParent" class="btn btn-primary">
+          Link Parent
+        </button>
+
+        <h2>Link History</h2>
+
+        <div v-for="h in history" :key="h._id">
+          <p>
+            Parent: {{ h.parent?.name }} →
+            Student: {{ h.student?.name }}
+            (by {{ h.linkedBy?.name }})
+          </p>
+        </div>
+
+        <button @click="fetchParentChildren">View Children</button>
+
+          <div v-if="selectedParentData">
+            <h3>Children:</h3>
+            <ul>
+              <li v-for="c in selectedParentData.children" :key="c._id">
+                {{ c.name }}
+              </li>
+            </ul>
+          </div>
         </section>
 
 

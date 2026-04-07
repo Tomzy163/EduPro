@@ -24,6 +24,7 @@ export const useAuthStore = defineStore("auth", {
 
   actions: {
 async loginUser(credentials) {
+ 
   try {
     console.log("Sending login request...");
     const res = await API.post("/auth/login", credentials);
@@ -62,3 +63,22 @@ async loginUser(credentials) {
     },
   },
 });
+
+// sessionStorage.clear();
+
+// connectSocket(user.id);
+
+// switch (user.role) {
+//   case "admin":
+//     router.push("/dashboard/admin");
+//     break;
+//   case "teacher":
+//     router.push("/dashboard/teacher");
+//     break;
+//   case "student":
+//     router.push("/dashboard/student");
+//     break;
+//   case "parent":
+//     router.push("/dashboard/parent");
+//     break;
+// }
