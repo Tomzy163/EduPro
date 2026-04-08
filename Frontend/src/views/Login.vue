@@ -13,7 +13,7 @@ const showPassword = ref(false);
 const darkMode = ref(false);
 const loading = ref(false);
 const error = ref("");
-const school = ref("");
+const schoolName = ref("");
 
 const history = ref([]);
 const editId = ref(null);
@@ -33,7 +33,7 @@ const handleLogin = async () => {
     const res = await auth.loginUser({
       email: email.value,
       password: password.value,
-      school: school.value,
+      school: schoolName.value,
     });
 
     console.log("LOGIN SUCCESS:", res);
@@ -112,7 +112,7 @@ const handleLogin = async () => {
           <div class="mb-4">
       <label class="block text-sm mb-1">School</label>
       <input name="school"
-        v-model="school"
+        v-model="schoolName"
         placeholder="Enter your school name"
         class="input"
       />

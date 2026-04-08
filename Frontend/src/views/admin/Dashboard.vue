@@ -23,6 +23,10 @@ const users = ref([]);
 const courses = ref([]);
 const payments = ref([]);
 const notifications = ref([]);
+const search = ref("");
+const roleFilter = ref("all");
+const currentPage = ref(1);
+const perPage = 5;
 // const auth = useAuthStore();
 
 const timetable = ref([]); // existing timetable
@@ -137,14 +141,36 @@ const linkParent = async () => {
   }
 };
 
-// const fetchHistory = async () => {
-//   try {
-//     const res = await API.get("/relationships/history");
-//     history.value = res.data;
-//   } catch (err) {
-//     console.error(err);
-//   }
-// };
+const filteredUsers = computed(() => {
+  return users.value.filter((u) => {
+    const matchesSearch =
+      u.name.toLowerCase().includes(search.value.toLowerCase()) ||
+      u.email.toLowerCase().includes(search.value.toLowerCase());
+
+    const matchesRole =
+      roleFilter.value === "all" || u.role === roleFilter.value;
+
+    return matchesSearch && matchesRole;
+  });
+});
+
+watch(search, () => {
+  currentPage.value = 1;
+});
+
+watch(roleFilter, () => {
+  currentPage.value = 1;
+});
+
+const paginatedUsers = computed(() => {
+  const start = (currentPage.value - 1) * perPage;
+  return filteredUsers.value.slice(start, start + perPage);
+});
+
+const totalPages = computed(() =>
+  Math.ceil(filteredUsers.value.length / perPage)
+);
+
 const handleDeleteAllLinks = async () => {
   if (!confirm("Delete ALL links?")) return;
 
@@ -253,10 +279,16 @@ const clearAllMessages = async () => {
 };
 
 // Save school
-const saveSchool = () => {
-  if (!schoolName.value) return alert("Enter school name");
-  localStorage.setItem("schoolName", schoolName.value);
-  alert("School name saved!");
+const saveSchool = async () => {
+  try {
+    await API.post("/schools", {
+      name: schoolName.value,
+    });
+
+    alert("School saved!");
+  } catch (err) {
+    console.error(err);
+  }
 };
 
 // Fetch users & courses
@@ -301,56 +333,22 @@ const addCourse = async () => {
   fetchData();
 };
 
-const assignTeacherMulti = async () => {
-  if (!assignTeacherId.value || assignCourses.value.length === 0) {
-    return alert("Select teacher and courses");
-  }
+// const assignTeacherMulti = async () => {
+//   if (!assignTeacherId.value || assignCourses.value.length === 0) {
+//     return alert("Select teacher and courses");
+//   }
 
-  for (let courseId of assignCourses.value) {
-    await assignTeacher({
-      courseId,
-      teacherId: assignTeacherId.value,
-    });
-  }
+//   for (let courseId of assignCourses.value) {
+//     await assignTeacher({
+//       courseId,
+//       teacherId: assignTeacherId.value,
+//     });
+//   }
 
-  assignCourses.value = [];
-  assignTeacherId.value = "";
-  fetchData();
-};
-
-const assignStudentMulti = async () => {
-  if (!assignStudentId.value || assignCourses.value.length === 0) {
-    return alert("Select student and courses");
-  }
-
-  for (let courseId of assignCourses.value) {
-    await assignStudent({
-      courseId,
-      studentId: assignStudentId.value,
-    });
-  }
-
-  assignCourses.value = [];
-  assignStudentId.value = "";
-  fetchData();
-};
-
-const assignTeacherMulti = async () => {
-  if (!assignTeacherId.value || assignCourses.value.length === 0) {
-    return alert("Select teacher and courses");
-  }
-
-  for (let courseId of assignCourses.value) {
-    await assignTeacher({
-      courseId,
-      teacherId: assignTeacherId.value,
-    });
-  }
-
-  assignCourses.value = [];
-  assignTeacherId.value = "";
-  fetchData();
-};
+//   assignCourses.value = [];
+//   assignTeacherId.value = "";
+//   fetchData();
+// };
 
 const assignStudentMulti = async () => {
   if (!assignStudentId.value || assignCourses.value.length === 0) {
@@ -368,6 +366,40 @@ const assignStudentMulti = async () => {
   assignStudentId.value = "";
   fetchData();
 };
+
+const assignTeacherMulti = async () => {
+  if (!assignTeacherId.value || assignCourses.value.length === 0) {
+    return alert("Select teacher and courses");
+  }
+
+  for (let courseId of assignCourses.value) {
+    await assignTeacher({
+      courseId,
+      teacherId: assignTeacherId.value,
+    });
+  }
+
+  assignCourses.value = [];
+  assignTeacherId.value = "";
+  fetchData();
+};
+
+// const assignStudentMulti = async () => {
+//   if (!assignStudentId.value || assignCourses.value.length === 0) {
+//     return alert("Select student and courses");
+//   }
+
+//   for (let courseId of assignCourses.value) {
+//     await assignStudent({
+//       courseId,
+//       studentId: assignStudentId.value,
+//     });
+//   }
+
+//   assignCourses.value = [];
+//   assignStudentId.value = "";
+//   fetchData();
+// };
 
 // Payments
 const fetchPayments = async () => {
@@ -477,6 +509,16 @@ onMounted(() => {
       <button @click="addUser" class="btn btn-primary mb-2">Create User</button>
 
           <h2 class="section-title">Users</h2>
+          <div class="flex gap-2 mb-3">
+            <input v-model="search" placeholder="Search by name/email..." class="input" />
+
+            <select v-model="roleFilter" class="input">
+              <option value="all">All Roles</option>
+              <option value="teacher">Teacher</option>
+              <option value="student">Student</option>
+              <option value="parent">Parent</option>
+            </select>
+          </div>
 
           <div class="table-wrapper">
             <table class="table">
@@ -490,10 +532,17 @@ onMounted(() => {
               </thead>
 
               <tbody>
-                <tr v-for="u in users" :key="u._id">
+                <tr v-if="paginatedUsers.length === 0">
+                  <td colspan="4">No users found</td>
+                </tr>
+                <tr v-for="u in paginatedUsers" :key="u._id">
                   <td>{{ u.name }}</td>
                   <td>{{ u.email }}</td>
-                  <td>{{ u.role }}</td>
+                  <td>
+                    <span :class="['badge', u.role]">
+                      {{ u.role }}
+                    </span>
+                  </td>
                   <td>
                     <button @click="removeUser(u._id)" class="btn btn-danger btn-sm">
                       Delete
@@ -502,6 +551,25 @@ onMounted(() => {
                 </tr>
               </tbody>
             </table>
+            <div class="flex gap-2 mt-3">
+                  <button
+                    @click="currentPage--"
+                    :disabled="currentPage === 1"
+                    class="btn btn-sm"
+                  >
+                    Prev
+                  </button>
+
+                  <span>Page {{ currentPage }} / {{ totalPages }}</span>
+
+                  <button
+                    @click="currentPage++"
+                    :disabled="currentPage === totalPages"
+                    class="btn btn-sm"
+                  >
+                    Next
+                  </button>
+                </div>
           </div>
         </section>
 
@@ -821,6 +889,34 @@ onMounted(() => {
   cursor: pointer;
   border: none;
   transition: 0.2s;
+}
+
+.table tr:hover {
+  background: #f9fafb;
+}
+
+.table td {
+  vertical-align: middle;
+}
+
+.badge {
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: white;
+  font-weight: 600;
+}
+
+.badge.teacher {
+  background: #3b82f6;
+}
+
+.badge.student {
+  background: #10b981;
+}
+
+.badge.parent {
+  background: #f59e0b;
 }
 
 .btn-primary {

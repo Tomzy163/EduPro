@@ -33,7 +33,7 @@ export const register = async (req, res) => {
     }
 
     // Check if school exists
-    let school = await School.findOne({ name: schoolName });
+    let school = await School.findOne({ name: schoolName.trim() });
 
     if (school) {
       return res.status(400).json({
@@ -82,6 +82,8 @@ export const register = async (req, res) => {
 export const loginUser = async (req, res) => {
   try {
     const { email, password, school: schoolName } = req.body;
+
+    console.log("LOGIN BODY:", req.body);
 
     if (!email || !password || !schoolName) {
       loading.value = false;
