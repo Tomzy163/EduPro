@@ -20,12 +20,15 @@ export const linkParentToStudent = async (req, res) => {
       return res.status(400).json({ message: "Invalid student" });
     }
 
+    console.log("PARENT CHILDREN:", parent.children);
+    console.log("STUDENT PARENTS:", student.parents);
+
     // ✅ FIX: initialize arrays
     parent.children = parent.children || [];
     student.parents = student.parents || [];
 
     // ✅ prevent duplicates
-    if (parent.children.includes(studentId)) {
+    if (parent.children.some(id => id.toString() === studentId)) {
       return res.status(400).json({ message: "Already linked" });
     }
 
@@ -40,7 +43,7 @@ export const linkParentToStudent = async (req, res) => {
     await ParentStudentLink.create({
       parent: parentId,
       student: studentId,
-      school: req.user.school._id,
+      school: req.user.school,
       linkedBy: req.user._id,
     });
 
@@ -70,7 +73,7 @@ export const getStudentWithParents = async (req, res) => {
 
 export const getLinkHistory = async (req, res) => {
   const history = await ParentStudentLink.find({
-    school: req.user.school._id,
+    school: req.user.school,
   })
     .populate("parent", "name")
     .populate("student", "name")
@@ -80,6 +83,31 @@ export const getLinkHistory = async (req, res) => {
   res.json(history);
 };
 // DELETE SINGLE LINK
+// export const deleteLink = async (req, res) => {
+//   try {
+//     const link = await ParentStudentLink.findById(req.params.id);
+
+//     if (!link) {
+//       return res.status(404).json({ message: "Link not found" });
+//     }
+
+//     // remove from users too
+//     await User.findByIdAndUpdate(link.parent, {
+//       $pull: { children: link.student },
+//     });
+
+//     await User.findByIdAndUpdate(link.student, {
+//       $pull: { parents: link.parent },
+//     });
+
+//     await link.deleteOne();
+
+//     res.json({ message: "Link deleted" });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
 export const deleteLink = async (req, res) => {
   try {
     const link = await ParentStudentLink.findById(req.params.id);
@@ -88,7 +116,6 @@ export const deleteLink = async (req, res) => {
       return res.status(404).json({ message: "Link not found" });
     }
 
-    // remove from users too
     await User.findByIdAndUpdate(link.parent, {
       $pull: { children: link.student },
     });
@@ -100,18 +127,41 @@ export const deleteLink = async (req, res) => {
     await link.deleteOne();
 
     res.json({ message: "Link deleted" });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
 
 // DELETE ALL LINKS
+// export const deleteAllLinks = async (req, res) => {
+//   try {
+//     const links = await ParentStudentLink.find({
+//       school: req.user.school,
+//     });
+
+//     for (let link of links) {
+//       await User.findByIdAndUpdate(link.parent, {
+//         $pull: { children: link.student },
+//       });
+
+//       await User.findByIdAndUpdate(link.student, {
+//         $pull: { parents: link.parent },
+//       });
+//     }
+
+//     await ParentStudentLink.deleteMany({
+//       school: req.user.school._id,
+//     });
+
+//     res.json({ message: "All links deleted" });
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
 export const deleteAllLinks = async (req, res) => {
   try {
-    const links = await ParentStudentLink.find({
-      school: req.user.school._id,
-    });
+    const links = await ParentStudentLink.find();
 
     for (let link of links) {
       await User.findByIdAndUpdate(link.parent, {
@@ -123,18 +173,54 @@ export const deleteAllLinks = async (req, res) => {
       });
     }
 
-    await ParentStudentLink.deleteMany({
-      school: req.user.school._id,
-    });
+    await ParentStudentLink.deleteMany({});
 
     res.json({ message: "All links deleted" });
   } catch (err) {
+    console.error("DELETE ALL ERROR:", err);
     res.status(500).json({ message: err.message });
   }
 };
 
-
 // UPDATE LINK
+// export const updateLink = async (req, res) => {
+//   try {
+//     const { parentId, studentId } = req.body;
+
+//     const link = await ParentStudentLink.findById(req.params.id);
+
+//     if (!link) {
+//       return res.status(404).json({ message: "Link not found" });
+//     }
+
+//     // remove old relation
+//     await User.findByIdAndUpdate(link.parent, {
+//       $pull: { children: link.student },
+//     });
+
+//     await User.findByIdAndUpdate(link.student, {
+//       $pull: { parents: link.parent },
+//     });
+
+//     // add new relation
+//     await User.findByIdAndUpdate(parentId, {
+//       $addToSet: { children: studentId },
+//     });
+
+//     await User.findByIdAndUpdate(studentId, {
+//       $addToSet: { parents: parentId },
+//     });
+
+//     link.parent = parentId;
+//     link.student = studentId;
+
+//     await link.save();
+
+//     res.json({ message: "Link updated" });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
 export const updateLink = async (req, res) => {
   try {
     const { parentId, studentId } = req.body;
@@ -145,7 +231,7 @@ export const updateLink = async (req, res) => {
       return res.status(404).json({ message: "Link not found" });
     }
 
-    // remove old relation
+    // remove old
     await User.findByIdAndUpdate(link.parent, {
       $pull: { children: link.student },
     });
@@ -154,7 +240,7 @@ export const updateLink = async (req, res) => {
       $pull: { parents: link.parent },
     });
 
-    // add new relation
+    // add new
     await User.findByIdAndUpdate(parentId, {
       $addToSet: { children: studentId },
     });
@@ -169,7 +255,7 @@ export const updateLink = async (req, res) => {
     await link.save();
 
     res.json({ message: "Link updated" });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };

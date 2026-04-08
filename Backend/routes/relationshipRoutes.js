@@ -1,3 +1,4 @@
+import express from "express";
 import {
   linkParentToStudent,
   getParentWithChildren,
@@ -5,19 +6,22 @@ import {
   getLinkHistory,
   deleteLink,
   deleteAllLinks,
-  updateLink
+  updateLink,
 } from "../controllers/relationshipController.js";
 
-router.post("/link", protect, authorize("admin"), linkParentToStudent);
+import { protect } from "../middleware/authMiddleware.js";
+import { authorize } from "../middleware/roleMiddleware.js";
 
-router.get("/history", protect, authorize("admin"), getLinkHistory);
+const router = express.Router();
+
+router.post("/link", protect, linkParentToStudent);
 
 router.get("/parent/:id", protect, getParentWithChildren);
 router.get("/student/:id", protect, getStudentWithParents);
+router.get("/history", protect, getLinkHistory);
 
-// ✅ NEW
-router.delete("/:id", protect, authorize("admin"), deleteLink);
-router.delete("/", protect, authorize("admin"), deleteAllLinks);
-router.put("/:id", protect, authorize("admin"), updateLink);
+router.delete("/:id", protect, deleteLink);
+router.put("/:id", protect, updateLink);
+router.delete("/", protect, deleteAllLinks);
 
 export default router;

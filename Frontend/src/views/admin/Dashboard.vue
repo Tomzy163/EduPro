@@ -17,6 +17,7 @@ import {
 import Notifications from "../../components/Notifications.vue";
 import AdminAnalytics from "../../components/AdminAnalytics.vue";
 import API from "../../services/api";
+// import { deleteAllLinks } from "@/services/relationshipService";
 
 const users = ref([]);
 const courses = ref([]);
@@ -96,7 +97,7 @@ const term = ref("First Term");
 // ======================
 // ASSIGNMENT STATE
 // ======================
-const assignCourse = ref("");
+const assignCourse = ref([]);
 const assignTeacherId = ref("");
 const assignStudentId = ref("");
 
@@ -117,6 +118,9 @@ const parentId = ref("");
 const studentId = ref("");
 const history = ref([]);
 const selectedParentData = ref(null);
+const editId = ref(null);
+const editParent = ref("");
+const editStudent = ref("");
 
 const linkParent = async () => {
   try {
@@ -126,8 +130,10 @@ const linkParent = async () => {
     });
 
     alert("Linked successfully");
+    fetchHistory();
   } catch (err) {
-    console.error(err);
+    console.error("FULL ERROR:", err.response?.data);
+    alert(err.response?.data?.message || "Link failed");
   }
 };
 
@@ -139,6 +145,12 @@ const linkParent = async () => {
 //     console.error(err);
 //   }
 // };
+const handleDeleteAllLinks = async () => {
+  if (!confirm("Delete ALL links?")) return;
+
+  await API.delete("/relationships/"); // ✅ FIXED
+  fetchHistory();
+};
 
 const fetchParentChildren = async () => {
   const res = await API.get(`/relationships/parent/${parentId.value}`);
@@ -147,12 +159,19 @@ const fetchParentChildren = async () => {
 
 const fetchHistory = async () => {
   const res = await API.get("/relationships/history");
+  console.log("HISTORY:", res.data); // 👈 VERY IMPORTANT
   history.value = res.data;
 };
 
 const removeLink = async (id) => {
-  await API.delete(`/relationships/${id}`);
-  fetchHistory();
+  if (!confirm("Delete this link?")) return;
+
+  try {
+    await API.delete(`/relationships/${id}`);
+    fetchHistory();
+  } catch (err) {
+    console.error("DELETE ERROR:", err.response?.data || err);
+  }
 };
 
 const startEdit = (link) => {
@@ -162,13 +181,17 @@ const startEdit = (link) => {
 };
 
 const updateLink = async () => {
-  await API.put(`/relationships/${editId.value}`, {
-    parentId: editParent.value,
-    studentId: editStudent.value,
-  });
+  try {
+    await API.put(`/relationships/${editId.value}`, {
+      parentId: editParent.value,
+      studentId: editStudent.value,
+    });
 
-  editId.value = null;
-  fetchHistory();
+    editId.value = null;
+    fetchHistory();
+  } catch (err) {
+    console.error("UPDATE ERROR:", err.response?.data || err);
+  }
 };
 
 // ======================
@@ -278,33 +301,71 @@ const addCourse = async () => {
   fetchData();
 };
 
-const assignTeacherToCourse = async () => {
-  if (!assignCourse.value || !assignTeacherId.value)
-    return alert("Select course and teacher");
+const assignTeacherMulti = async () => {
+  if (!assignTeacherId.value || assignCourses.value.length === 0) {
+    return alert("Select teacher and courses");
+  }
 
-  await assignTeacher({
-    courseId: assignCourse.value,
-    teacherId: assignTeacherId.value,
-  });
+  for (let courseId of assignCourses.value) {
+    await assignTeacher({
+      courseId,
+      teacherId: assignTeacherId.value,
+    });
+  }
 
-  assignCourse.value = "";
+  assignCourses.value = [];
   assignTeacherId.value = "";
-
   fetchData();
 };
 
-const assignStudentToCourse = async () => {
-  if (!assignCourse.value || !assignStudentId.value)
-    return alert("Select course and student");
+const assignStudentMulti = async () => {
+  if (!assignStudentId.value || assignCourses.value.length === 0) {
+    return alert("Select student and courses");
+  }
 
-  await assignStudent({
-    courseId: assignCourse.value,
-    studentId: assignStudentId.value,
-  });
+  for (let courseId of assignCourses.value) {
+    await assignStudent({
+      courseId,
+      studentId: assignStudentId.value,
+    });
+  }
 
-  assignCourse.value = "";
+  assignCourses.value = [];
   assignStudentId.value = "";
+  fetchData();
+};
 
+const assignTeacherMulti = async () => {
+  if (!assignTeacherId.value || assignCourses.value.length === 0) {
+    return alert("Select teacher and courses");
+  }
+
+  for (let courseId of assignCourses.value) {
+    await assignTeacher({
+      courseId,
+      teacherId: assignTeacherId.value,
+    });
+  }
+
+  assignCourses.value = [];
+  assignTeacherId.value = "";
+  fetchData();
+};
+
+const assignStudentMulti = async () => {
+  if (!assignStudentId.value || assignCourses.value.length === 0) {
+    return alert("Select student and courses");
+  }
+
+  for (let courseId of assignCourses.value) {
+    await assignStudent({
+      courseId,
+      studentId: assignStudentId.value,
+    });
+  }
+
+  assignCourses.value = [];
+  assignStudentId.value = "";
   fetchData();
 };
 
@@ -415,13 +476,34 @@ onMounted(() => {
       </div>
       <button @click="addUser" class="btn btn-primary mb-2">Create User</button>
 
-      <ul class="list">
-        <li v-for="u in users" :key="u._id" class="list-item">
-          {{ u.name }} - {{ u.role }}
-          <button @click="removeUser(u._id)" class="btn btn-danger">Delete</button>
-        </li>
-      </ul>
-    </section>
+          <h2 class="section-title">Users</h2>
+
+          <div class="table-wrapper">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr v-for="u in users" :key="u._id">
+                  <td>{{ u.name }}</td>
+                  <td>{{ u.email }}</td>
+                  <td>{{ u.role }}</td>
+                  <td>
+                    <button @click="removeUser(u._id)" class="btn btn-danger btn-sm">
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
 
     <!-- COURSES -->
     <section class="card">
@@ -444,55 +526,100 @@ onMounted(() => {
     </section>
 
     <!-- ASSIGN TEACHER -->
-    <section class="card">
-      <h2 class="section-title">Assign Teacher</h2>
-      <select v-model="assignCourse" class="input mb-2">
-        <option disabled value="">Select Course</option>
-        <option v-for="c in courses" :key="c._id" :value="c._id">{{ c.name }}</option>
-      </select>
+        <section class="card">
+      <h2 class="section-title">Assign Teacher (Multiple Courses)</h2>
+
       <select v-model="assignTeacherId" class="input mb-2">
         <option disabled value="">Select Teacher</option>
-        <option v-for="u in users.filter(u => u.role === 'teacher')" :key="u._id" :value="u._id">{{ u.name }}</option>
+        <option v-for="u in users.filter(u => u.role==='teacher')" :value="u._id">
+          {{ u.name }}
+        </option>
       </select>
-      <button @click="assignTeacherToCourse" class="btn btn-primary">Assign</button>
-      <div v-for="teacher in users.filter(u => u.role === 'teacher')" :key="teacher._id">
-        <h4>{{ teacher.name }}</h4>
 
-        <ul>
-          <li v-for="course in courses.filter(c => c.teacher === teacher._id)">
-            {{ course.name }}
-          </li>
-        </ul>
-      </div>
-    </section>
+      <select v-model="assignCourses" multiple class="input mb-2">
+        <option v-for="c in courses" :value="c._id">
+          {{ c.name }}
+        </option>
+      </select>
+
+      <button @click="assignTeacherMulti" class="btn btn-primary">
+        Assign Courses
+      </button>
+              
+          <h2 class="section-title">Teacher Assignments</h2>
+
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Teacher</th>
+                <th>Course</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr v-for="c in courses" :key="c._id">
+                <td>
+                  {{ users.find(u => u._id === c.teacher)?.name || "Not Assigned" }}
+                </td>
+                <td>{{ c.name }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
 
     <!-- ASSIGN STUDENT -->
-    <section class="card">
-      <h2 class="section-title">Assign Student</h2>
-      <select v-model="assignStudentId" class="input mb-2">
-        <option disabled value="">Select Student</option>
-        <option v-for="u in users.filter(u => u.role === 'student')" :key="u._id" :value="u._id">{{ u.name }}</option>
-      </select>
-      <select v-model="assignCourse" class="input mb-2">
-        <option disabled value="">Select Course</option>
-        <option v-for="c in courses" :key="c._id" :value="c._id">{{ c.name }}</option>
-      </select>
-      <button @click="assignStudentToCourse" class="btn btn-primary">Assign</button>
+            <section class="card">
+          <h2 class="section-title">Assign Student (Multiple Courses)</h2>
 
-                <div v-for="student in users.filter(u => u.role === 'student')" :key="student._id">
-        <h4>{{ student.name }}</h4>
+          <select v-model="assignStudentId" class="input mb-2">
+            <option disabled value="">Select Student</option>
+            <option v-for="u in users.filter(u => u.role==='student')" :value="u._id">
+              {{ u.name }}
+            </option>
+          </select>
 
-        <ul>
-          <li v-for="course in courses.filter(c => c.students.includes(student._id))">
-            {{ course.name }}
-          </li>
-        </ul>
-      </div>
-    </section>
+          <select v-model="assignCourses" multiple class="input mb-2">
+            <option v-for="c in courses" :value="c._id">
+              {{ c.name }}
+            </option>
+          </select>
+
+          <button @click="assignStudentMulti" class="btn btn-primary">
+            Assign Courses
+          </button>
+
+          <h2 class="section-title">Student Assignments</h2>
+
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Courses</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr
+                v-for="student in users.filter(u => u.role==='student')"
+                :key="student._id"
+              >
+                <td>{{ student.name }}</td>
+                <td>
+                  <span
+                    v-for="c in courses.filter(c => c.students.includes(student._id))"
+                    :key="c._id"
+                  >
+                    {{ c.name }},
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
               <!-- link parent to students -->
 
     <section class="card">
-              <<h2>Link Parent to Student</h2>
+              <h2>Link Parent to Student</h2>
 
         <select v-model="parentId" class="input">
           <option disabled value="">Select Parent</option>
@@ -514,36 +641,38 @@ onMounted(() => {
 
         <h2>Link History</h2>
 
-          <button @click="fetchHistory" class="btn btn-primary">Refresh</button>
-          <button @click="API.delete('/relationships').then(fetchHistory)" class="btn btn-danger">
+          <button @click="fetchHistory" class="btn btn-primary btn-sm">Refresh</button>
+          <button @click="handleDeleteAllLinks" class="btn btn-danger btn-sm">
             Delete All
           </button>
 
           <div v-for="h in history" :key="h._id">
 
             <div v-if="editId === h._id">
-              <select v-model="editParent">
-                <option v-for="u in users.filter(u => u.role==='parent')" :value="u._id">
+              <select v-model="editParent" class="input">
+                <option v-for="u in users.filter(u => u.role ==='parent')" :value="u._id">
                   {{ u.name }}
                 </option>
               </select>
 
-              <select v-model="editStudent">
+              <select v-model="editStudent" class="input">
                 <option v-for="u in users.filter(u => u.role==='student')" :value="u._id">
                   {{ u.name }}
                 </option>
               </select>
 
-              <button @click="updateLink" class="btn btn-primary">Save</button>
+              <button @click="updateLink" class="btn btn-success btn-sm">Save</button>
             </div>
 
             <div v-else>
-              <p>
-                {{ h.parent?.name }} → {{ h.student?.name }}
-              </p>
+                  <p>
+                    👨‍👩‍👧 Parent: {{ h.parent?.name }} →
+                    🎓 Student: {{ h.student?.name }}
+                    (by {{ h.linkedBy?.name }})
+                  </p>
 
-              <button @click="startEdit(h)" class="btn btn-primary">Edit</button>
-              <button @click="removeLink(h._id)" class="btn btn-danger">Delete</button>
+              <button @click="startEdit(h)" class="btn btn-primary btn-sm">Edit</button>
+              <button @click="removeLink(h._id)" class="btn btn-danger btn-sm">Delete</button>
             </div>
 
           </div>
