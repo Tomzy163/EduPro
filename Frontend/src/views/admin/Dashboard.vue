@@ -1,6 +1,5 @@
 <script setup>
-import { ref, onMounted } from "vue";
-import { computed } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
 
 import { getUsers, createUser, deleteUser } from "../../services/userService";
 import { useAuthStore } from "../../store/authStore";
@@ -101,7 +100,7 @@ const term = ref("First Term");
 // ======================
 // ASSIGNMENT STATE
 // ======================
-const assignCourse = ref([]);
+const assignCourses = ref([]);
 const assignTeacherId = ref("");
 const assignStudentId = ref("");
 
@@ -351,35 +350,35 @@ const addCourse = async () => {
 // };
 
 const assignStudentMulti = async () => {
-  if (!assignStudentId.value || assignCourses.value.length === 0) {
+  if (!assignStudentId.value || assignStudentCourses.value.length === 0) {
     return alert("Select student and courses");
   }
 
-  for (let courseId of assignCourses.value) {
+  for (let courseId of assignStudentCourses.value) {
     await assignStudent({
       courseId,
       studentId: assignStudentId.value,
     });
   }
 
-  assignCourses.value = [];
+  assignStudentCourses.value = [];
   assignStudentId.value = "";
   fetchData();
 };
 
 const assignTeacherMulti = async () => {
-  if (!assignTeacherId.value || assignCourses.value.length === 0) {
+  if (!assignTeacherId.value || assignTeacherCourses.value.length === 0) {
     return alert("Select teacher and courses");
   }
 
-  for (let courseId of assignCourses.value) {
+  for (let courseId of assignTeacherCourses.value) {
     await assignTeacher({
       courseId,
       teacherId: assignTeacherId.value,
     });
   }
 
-  assignCourses.value = [];
+  assignTeacherCourses.value = [];
   assignTeacherId.value = "";
   fetchData();
 };
@@ -428,262 +427,230 @@ onMounted(() => {
 
 <template>
   <Navbar />
+
   <div class="dashboard">
     <h1 class="page-title">Admin Dashboard</h1>
 
-    <!-- Analytics -->
     <AdminAnalytics />
 
     <!-- SCHOOL -->
     <section class="card">
-      <h2 class="section-title">School Setup</h2>
-      <div class="flex gap-2 items-center">
-        <input v-model="schoolName" placeholder="Enter School Name" class="input" />
-        <button @click="saveSchool" class="btn btn-primary">Save</button>
+      <h2>School Setup</h2>
+      <div class="row">
+        <input v-model="schoolName" placeholder="School Name" class="input" />
+        <button @click="saveSchool" class="btn primary">Save</button>
       </div>
     </section>
 
     <!-- ANNOUNCEMENT -->
     <section class="card">
-      <h2 class="section-title">Send Announcement</h2>
-      <input v-model="title" placeholder="Title" class="input mb-2"/> 
-      <textarea v-model="content" placeholder="Content" class="input mb-2"></textarea>
-      <select v-model="roleTarget" class="input mb-2">
-        <option value="student">Students</option>
-        <option value="teacher">Teachers</option>
-        <option value="parent">Parents</option>
-        <option value="all">All</option>
-      </select>
-      <button @click="send" class="btn btn-success">Send</button>
-      <!-- <section class="card"> -->
-  <h2 class="section-title">Message History</h2>
+      <h2>Announcements</h2>
 
-  <div v-if="messages.length === 0">
-  <p>No messages yet</p>
-</div>
+      <input v-model="title" placeholder="Title" class="input" />
+      <textarea v-model="content" placeholder="Message" class="input"></textarea>
 
-<div v-for="msg in messages" :key="msg._id">
-  <h4>{{ msg.title }}</h4>
-  <p>{{ msg.content }}</p>
-  <small>{{ msg.sender?.name }}</small>
-</div>
+      <div class="row">
+        <select v-model="roleTarget" class="input">
+          <option value="student">Students</option>
+          <option value="teacher">Teachers</option>
+          <option value="parent">Parents</option>
+          <option value="all">All</option>
+        </select>
 
-  <button @click="clearAllMessages" class="btn btn-danger mb-2">
-    Clear All
-  </button>
+        <button @click="send" class="btn success">Send</button>
+      </div>
 
-  <div v-for="msg in sentMessages" :key="msg._id" class="list-item">
-    
-    <div v-if="editingMessageId === msg._id">
-      <input v-model="editTitle" class="input mb-1" />
-      <textarea v-model="editContent" class="input mb-1"></textarea>
-      <button @click="updateMsg" class="btn btn-success btn-sm">Save</button>
-    </div>
+      <div class="divider"></div>
 
-    <div v-else>
-      <strong>{{ msg.title }}</strong>
-      <p>{{ msg.content }}</p>
+      <h3>Message History</h3>
 
-      <button @click="startEdit(msg)" class="btn btn-primary btn-sm">Edit</button>
-      <button @click="deleteMsg(msg._id)" class="btn btn-danger btn-sm">Delete</button>
-    </div>
+      <div v-if="messages.length === 0">No messages</div>
 
-  </div>
-</section>
-    <!-- </section> -->
+      <div v-for="msg in messages" :key="msg._id" class="message">
+        <h4>{{ msg.title }}</h4>
+        <p>{{ msg.content }}</p>
+        <small>{{ msg.sender?.name }}</small>
+      </div>
+
+      <button @click="clearAllMessages" class="btn danger small">
+        Clear All
+      </button>
+    </section>
 
     <!-- USERS -->
     <section class="card">
-      <h2 class="section-title">Create User</h2>
-      <div class="form-grid">
-        <input v-model="name" placeholder="Full Name" class="input"/>
-        <input v-model="email" placeholder="Email" class="input"/>
-        <input v-model="password" placeholder="Password" class="input"/>
+      <h2>Create User</h2>
+
+      <div class="grid">
+        <input v-model="name" placeholder="Name" class="input" />
+        <input v-model="email" placeholder="Email" class="input" />
+        <input v-model="password" placeholder="Password" class="input" />
+
         <select v-model="role" class="input">
-          <option disabled value="">Select Role</option>
           <option value="teacher">Teacher</option>
           <option value="student">Student</option>
           <option value="parent">Parent</option>
         </select>
       </div>
-      <button @click="addUser" class="btn btn-primary mb-2">Create User</button>
 
-          <h2 class="section-title">Users</h2>
-          <div class="flex gap-2 mb-3">
-            <input v-model="search" placeholder="Search by name/email..." class="input" />
+      <button @click="addUser" class="btn primary">Create</button>
 
-            <select v-model="roleFilter" class="input">
-              <option value="all">All Roles</option>
-              <option value="teacher">Teacher</option>
-              <option value="student">Student</option>
-              <option value="parent">Parent</option>
-            </select>
-          </div>
+      <div class="divider"></div>
 
-          <div class="table-wrapper">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
+      <h3>Users</h3>
 
-              <tbody>
-                <tr v-if="paginatedUsers.length === 0">
-                  <td colspan="4">No users found</td>
-                </tr>
-                <tr v-for="u in paginatedUsers" :key="u._id">
-                  <td>{{ u.name }}</td>
-                  <td>{{ u.email }}</td>
-                  <td>
-                    <span :class="['badge', u.role]">
-                      {{ u.role }}
-                    </span>
-                  </td>
-                  <td>
-                    <button @click="removeUser(u._id)" class="btn btn-danger btn-sm">
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <div class="flex gap-2 mt-3">
-                  <button
-                    @click="currentPage--"
-                    :disabled="currentPage === 1"
-                    class="btn btn-sm"
-                  >
-                    Prev
-                  </button>
+      <div class="row">
+        <input v-model="search" placeholder="Search..." class="input" />
 
-                  <span>Page {{ currentPage }} / {{ totalPages }}</span>
-
-                  <button
-                    @click="currentPage++"
-                    :disabled="currentPage === totalPages"
-                    class="btn btn-sm"
-                  >
-                    Next
-                  </button>
-                </div>
-          </div>
-        </section>
-
-    <!-- COURSES -->
-    <section class="card">
-      <h2 class="section-title">Courses</h2>
-      <div class="flex gap-2 mb-2">
-        <input v-model="courseName" placeholder="Course Name" class="input"/>
-        <select v-model="term" class="input">
-          <option>First Term</option>
-          <option>Second Term</option>
-          <option>Third Term</option>
+        <select v-model="roleFilter" class="input">
+          <option value="all">All</option>
+          <option value="teacher">Teacher</option>
+          <option value="student">Student</option>
+          <option value="parent">Parent</option>
         </select>
-        <button @click="addCourse" class="btn btn-primary">Create Course</button>
       </div>
 
-      <ul class="list">
-        <li v-for="c in courses" :key="c._id" class="list-item">
-          {{ c.name }} ({{ c.term }})
-        </li>
-      </ul>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th></th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr v-for="u in paginatedUsers" :key="u._id">
+            <td>{{ u.name }}</td>
+            <td>{{ u.email }}</td>
+            <td><span class="badge">{{ u.role }}</span></td>
+            <td>
+              <button @click="removeUser(u._id)" class="btn danger small">
+                Delete
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="pagination">
+        <button class="btn success small" @click="currentPage--" :disabled="currentPage===1">Prev</button>
+        <span>{{ currentPage }} / {{ totalPages }}</span>
+        <button class="btn primary small" @click="currentPage++" :disabled="currentPage===totalPages">Next</button>
+      </div>
     </section>
 
     <!-- ASSIGN TEACHER -->
-        <section class="card">
-      <h2 class="section-title">Assign Teacher (Multiple Courses)</h2>
+    <section class="card">
+      <h2>Assign Teacher Courses</h2>
 
-      <select v-model="assignTeacherId" class="input mb-2">
+      <select v-model="assignTeacherId" class="input">
         <option disabled value="">Select Teacher</option>
-        <option v-for="u in users.filter(u => u.role==='teacher')" :value="u._id">
+        <option v-for="u in users.filter(u=>u.role==='teacher')" :value="u._id">
           {{ u.name }}
         </option>
       </select>
 
-      <select v-model="assignCourses" multiple class="input mb-2">
-        <option v-for="c in courses" :value="c._id">
+      <div class="course-grid">
+        <label v-for="c in courses" :key="c._id" class="course-item">
+          <input type="checkbox" :value="c._id" v-model="assignTeacherCourses" />
           {{ c.name }}
+        </label>
+      </div>
+
+      <button @click="assignTeacherMulti" class="btn primary">
+        Assign
+      </button>
+    </section>
+
+    <!-- ASSIGN STUDENT -->
+    <section class="card">
+      <h2>Assign Student Courses</h2>
+
+      <select v-model="assignStudentId" class="input">
+        <option disabled value="">Select Student</option>
+        <option v-for="u in users.filter(u=>u.role==='student')" :value="u._id">
+          {{ u.name }}
         </option>
       </select>
 
-      <button @click="assignTeacherMulti" class="btn btn-primary">
-        Assign Courses
+      <div class="course-grid">
+        <label v-for="c in courses" :key="c._id" class="course-item">
+          <input type="checkbox" :value="c._id" v-model="assignstudentCourses" />
+          {{ c.name }}
+        </label>
+      </div>
+
+      <button @click="assignStudentMulti" class="btn primary">
+        Assign
       </button>
-              
-          <h2 class="section-title">Teacher Assignments</h2>
+    </section>
 
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Teacher</th>
-                <th>Course</th>
-              </tr>
-            </thead>
+  
 
-            <tbody>
-              <tr v-for="c in courses" :key="c._id">
-                <td>
-                  {{ users.find(u => u._id === c.teacher)?.name || "Not Assigned" }}
-                </td>
-                <td>{{ c.name }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
+          <section class="card">
+                <h2 class="section-title">Assignment Overview</h2>
 
-    <!-- ASSIGN STUDENT -->
-            <section class="card">
-          <h2 class="section-title">Assign Student (Multiple Courses)</h2>
+                <div class="grid-2">
 
-          <select v-model="assignStudentId" class="input mb-2">
-            <option disabled value="">Select Student</option>
-            <option v-for="u in users.filter(u => u.role==='student')" :value="u._id">
-              {{ u.name }}
-            </option>
-          </select>
+                  <!-- TEACHERS -->
+                  <div>
+                    <h3>Teachers</h3>
+                    <table class="table modern-table">
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Courses</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="teacher in users.filter(u => u.role==='teacher')" :key="teacher._id">
+                          <td>{{ teacher.name }}</td>
+                          <td>
+                            <span
+                              v-for="c in courses.filter(c => c.teacher === teacher._id)"
+                              :key="c._id"
+                              class="tag blue"
+                            >
+                              {{ c.name }}
+                            </span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
 
-          <select v-model="assignCourses" multiple class="input mb-2">
-            <option v-for="c in courses" :value="c._id">
-              {{ c.name }}
-            </option>
-          </select>
+                  <!-- STUDENTS -->
+                  <div>
+                    <h3>Students</h3>
+                    <table class="table modern-table">
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Courses</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="student in users.filter(u => u.role==='student')" :key="student._id">
+                          <td>{{ student.name }}</td>
+                          <td>
+                            <span
+                              v-for="c in courses.filter(c => c.students.includes(student._id))"
+                              :key="c._id"
+                              class="tag green"
+                            >
+                              {{ c.name }}
+                            </span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
 
-          <button @click="assignStudentMulti" class="btn btn-primary">
-            Assign Courses
-          </button>
+                </div>
+              </section>
 
-          <h2 class="section-title">Student Assignments</h2>
-
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Student</th>
-                <th>Courses</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              <tr
-                v-for="student in users.filter(u => u.role==='student')"
-                :key="student._id"
-              >
-                <td>{{ student.name }}</td>
-                <td>
-                  <span
-                    v-for="c in courses.filter(c => c.students.includes(student._id))"
-                    :key="c._id"
-                  >
-                    {{ c.name }},
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
               <!-- link parent to students -->
 
     <section class="card">
@@ -703,14 +670,14 @@ onMounted(() => {
           </option>
         </select>
 
-        <button @click="linkParent" class="btn btn-primary">
+        <button @click="linkParent" class="btn primary">
           Link Parent
         </button>
 
         <h2>Link History</h2>
 
-          <button @click="fetchHistory" class="btn btn-primary btn-sm">Refresh</button>
-          <button @click="handleDeleteAllLinks" class="btn btn-danger btn-sm">
+          <button @click="fetchHistory" class="btn primary small">Refresh</button>
+          <button @click="handleDeleteAllLinks" class="btn danger small">
             Delete All
           </button>
 
@@ -729,7 +696,8 @@ onMounted(() => {
                 </option>
               </select>
 
-              <button @click="updateLink" class="btn btn-success btn-sm">Save</button>
+              <button @click="updateLink" class="btn success small">Save</button>
+              <button @click="removeLink" class="btn danger small">Delete</button>
             </div>
 
             <div v-else>
@@ -739,8 +707,8 @@ onMounted(() => {
                     (by {{ h.linkedBy?.name }})
                   </p>
 
-              <button @click="startEdit(h)" class="btn btn-primary btn-sm">Edit</button>
-              <button @click="removeLink(h._id)" class="btn btn-danger btn-sm">Delete</button>
+              <button @click="startEdit(h)" class="btn primary small">Edit</button>
+              <button @click="removeLink(h._id)" class="btn danger small">Delete</button>
             </div>
 
           </div>
@@ -777,7 +745,7 @@ onMounted(() => {
     </select>
   </div>
 
-  <button @click="addSlot" class="btn btn-primary mb-4">Add Slot</button>
+  <button @click="addSlot" class="btn primary mb-4">Add Slot</button>
 
   <!-- Timetable Table -->
   <div class="table-wrapper">
@@ -800,7 +768,7 @@ onMounted(() => {
           <td>{{ slot.teacher?.name }}</td>
           <td>{{ slot.student?.name || "All" }}</td>
           <td>
-            <button @click="removeSlot(slot._id)" class="btn btn-danger btn-sm">Delete</button>
+            <button @click="removeSlot(slot._id)" class="btn danger small">Delete</button>
           </td>
         </tr>
       </tbody>
@@ -827,8 +795,8 @@ onMounted(() => {
               <td>{{ p.amount }}</td>
               <td>{{ p.status }}</td>
               <td>
-                <button @click="approvePayment(p._id, 'approved')" class="btn btn-success btn-sm">Approve</button>
-                <button @click="approvePayment(p._id, 'rejected')" class="btn btn-danger btn-sm">Reject</button>
+                <button @click="approvePayment(p._id, 'approved')" class="btn success small">Approve</button>
+                <button @click="approvePayment(p._id, 'rejected')" class="btn danger small">Reject</button>
               </td>
             </tr>
           </tbody>
@@ -839,129 +807,143 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.dashboard {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding: 1rem;
-  background: #f3f4f6;
-  min-height: 100vh;
-  margin-top: 10px;
-}
-
-.page-title {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #1f2937;
-}
-
-.card {
-  background: white;
-  padding: 2.5rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-}
-
-.section-title {
+h2 {
+  font-size: 18px;
   font-weight: 600;
-  margin-bottom: 1rem;
-  color: #111827;
+  margin-bottom: 10px;
 }
 
-.input {
-  width: 100%;
-  padding: 0.6rem 1rem;
-  border-radius: 8px;
-  border: 1px solid #d1d5db;
-  outline: none;
-  transition: 0.2s;
-}
-
-.input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
-}
-
-.btn {
-  padding: 0.6rem 1.2rem;
-  border-radius: 8px;
+h3 {
+  font-size: 15px;
   font-weight: 600;
+  margin-bottom: 8px;
+}
+
+select.input {
   cursor: pointer;
-  border: none;
-  transition: 0.2s;
 }
 
-.table tr:hover {
-  background: #f9fafb;
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .table td {
   vertical-align: middle;
 }
 
-.badge {
-  padding: 0.3rem 0.6rem;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  color: white;
+.course-item span {
+  font-size: 0.85rem;
+}
+
+/* ======================
+   LAYOUT
+====================== */
+.dashboard {
+  padding: 20px;
+  background: #f5f7fb;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-height: 100vh;
+}
+
+.page-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+/* ======================
+   CARD
+====================== */
+.card {
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.05);
+}
+
+/* ======================
+   GRID & ROW
+====================== */
+.row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px,1fr));
+  gap: 10px;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* ======================
+   INPUT
+====================== */
+.input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  background: #fafafa;
+  transition: 0.2s;
+}
+
+.input:focus {
+  background: #fff;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37,99,235,0.2);
+  outline: none;
+}
+
+/* ======================
+   BUTTONS
+====================== */
+.btn {
+  padding: 10px 14px;
+  border-radius: 10px;
   font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.badge.teacher {
-  background: #3b82f6;
+.btn:hover {
+  transform: translateY(-1px);
 }
 
-.badge.student {
-  background: #10b981;
-}
-
-.badge.parent {
-  background: #f59e0b;
-}
-
-.btn-primary {
+.btn.primary {
   background: #2563eb;
   color: white;
 }
-.btn-primary:hover { background: #1d4ed8; }
 
-.btn-success {
+.btn.success {
   background: #16a34a;
   color: white;
 }
-.btn-success:hover { background: #15803d; }
 
-.btn-danger {
+.btn.danger {
   background: #dc2626;
   color: white;
 }
-.btn-danger:hover { background: #b91c1c; }
 
-.btn-sm {
-  padding: 0.3rem 0.6rem;
-  font-size: 0.8rem;
+.btn.small {
+  padding: 5px 10px;
+  font-size: 12px;
 }
 
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px,1fr));
-  gap: 0.8rem;
-  margin-bottom: 1rem;
-}
-
-.list {
-  list-style: none;
-  padding: 0;
-  margin-top: 0.5rem;
-}
-
-.list-item {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid #e5e7eb;
-}
-
+/* ======================
+   TABLE
+====================== */
 .table-wrapper {
   overflow-x: auto;
 }
@@ -969,29 +951,134 @@ onMounted(() => {
 .table {
   width: 100%;
   border-collapse: collapse;
-}
-
-.table th, .table td {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #e5e7eb;
+  margin-top: 10px;
 }
 
 .table th {
-  background: #f9fafb;
-  font-weight: 600;
+  background: #111827;
+  color: white;
+  font-size: 0.85rem;
   text-align: left;
 }
 
+.table th,
+.table td {
+  padding: 10px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.table tr:hover {
+  background: #f9fafb;
+}
+
+/* ======================
+   BADGES
+====================== */
+.badge {
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: white;
+  font-weight: 600;
+}
+
+.badge.teacher { background: #3b82f6; }
+.badge.student { background: #10b981; }
+.badge.parent  { background: #f59e0b; }
+
+/* ======================
+   COURSE GRID
+====================== */
+.course-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px,1fr));
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.course-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 8px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.course-item:hover {
+  background: #eef2ff;
+  border-color: #6366f1;
+}
+
+.course-item input {
+  accent-color: #4f46e5;
+}
+
+/* ======================
+   TAGS
+====================== */
+.selected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.tag {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #e5e7eb;
+}
+
+.tag.blue {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.tag.green {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+/* ======================
+   MESSAGES
+====================== */
+.message {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+/* ======================
+   PAGINATION
+====================== */
+.pagination {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+/* ======================
+   DIVIDER
+====================== */
+.divider {
+  height: 1px;
+  background: #eee;
+  margin: 15px 0;
+}
+
+/* ======================
+   RESPONSIVE
+====================== */
 @media (max-width: 768px) {
-  .form-grid {
+  .grid-2 {
     grid-template-columns: 1fr;
   }
 }
 
-
-.table-wrapper { overflow-x: auto; }
-.table { width: 100%; border-collapse: collapse; }
-.table th, .table td { padding: 0.75rem 1rem; border-bottom: 1px solid #e5e7eb; }
-.table th { background: #f9fafb; font-weight: 600; text-align: left; }
-.btn-sm { padding: 0.3rem 0.6rem; font-size: 0.8rem; }
 </style>
