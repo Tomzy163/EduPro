@@ -6,6 +6,7 @@ import Chart from "chart.js/auto";
 import { getStudentResults } from "../../services/resultService";
 import { getAttendance } from "../../services/attendanceService";
 import PerformanceChart from "../../components/PerformanceChart.vue";
+import Navbar from "@/components/Navbar.vue";
 import AttendanceChart from "../../components/AttendanceChart.vue";
 import Notifications from "../../components/Notifications.vue";
 import UserTimetable from "../../components/UserTimetable.vue";
@@ -183,6 +184,9 @@ onMounted(fetchData);
 </script>
 
 <template>
+  
+    <Navbar/>
+
   <div class="dashboard">
     <h1 class="page-title">Student Dashboard</h1>
 

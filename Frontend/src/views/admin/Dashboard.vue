@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch, computed } from "vue";
+import { ref, onMounted, watch, computed, onUnmounted } from "vue";
 
 import { getUsers, createUser, deleteUser } from "../../services/userService";
 import { useAuthStore } from "../../store/authStore";
@@ -20,6 +20,8 @@ import API from "../../services/api";
 
 const users = ref([]);
 const courses = ref([]);
+const classes = ref([]);
+const rooms = ref([]);
 const payments = ref([]);
 const notifications = ref([]);
 const search = ref("");
@@ -40,64 +42,15 @@ const times = ["08:00am-09:00am", "09:00am-10:00am", "10:00am-11:00am", "11:00am
 // ======================
 // TIMETABLE STATE
 // ======================
+const timetableClass = ref("");
 const timetableCourse = ref("");
 const timetableTeacher = ref("");
-const timetableStudent = ref("");
+// const timetableStudent = ref("");
 const timetableDay = ref("");
+const timetableRoom = ref("");
 const timetableTime = ref("");
 const timetableDraft = ref([]);
 
-// Fetch timetable
-const fetchTimetable = async () => {
-  const res = await API.get("/timetable");
-  timetable.value = res.data;
-};
-
-// Add timetable slot
-const addSlot = () => {
-  if (!timetableCourse.value || !timetableTeacher.value || !timetableDay.value || !timetableTime.value) {
-    return alert("Fill all fields");
-  }
-
-  timetableDraft.value.push({
-    course: timetableCourse.value,
-    teacher: timetableTeacher.value,
-    student: timetableStudent.value || null,
-    day: timetableDay.value,
-    time: timetableTime.value,
-  });
-
-  timetableCourse.value = "";
-  timetableTeacher.value = "";
-  timetableStudent.value = "";
-  timetableDay.value = "";
-  timetableTime.value = "";
-};
-
-const saveAllSlots = async () => {
-  await API.post("/timetable/bulk", timetableDraft.value);
-  timetableDraft.value = [];
-  fetchTimetable();
-};
-
-const startEditSlot = (slot) => {
-  editingSlotId.value = slot._id;
-  editSlot.value = { ...slot };
-};
-const updateSlot = async () => {
-  await API.put(`/timetable/${editingSlotId.value}`, editSlot.value);
-
-  editingSlotId.value = null;
-  fetchTimetable();
-};
-
-// Delete timetable slot
-const removeSlot = async (id) => {
-  if (confirm("Delete this timetable slot?")) {
-    await API.delete(`/timetable/${id}`);
-    fetchTimetable();
-  }
-};
 
 // USER FORM
 const name = ref("");
@@ -143,6 +96,101 @@ const selectedParentData = ref(null);
 const editId = ref(null);
 const editParent = ref("");
 const editStudent = ref("");
+
+// Fetch timetable
+// ======================
+// FETCH DATA
+// ======================
+const fetchAll = async () => {
+  const [u, c, cl, r, t] = await Promise.all([
+    API.get("/users"),
+    API.get("/courses"),
+    API.get("/classes"),
+    API.get("/rooms"),
+    API.get("/timetable"),
+  ]);
+
+  users.value = u.data;
+  courses.value = c.data;
+  classes.value = cl.data;
+  rooms.value = r.data;
+  timetable.value = t.data;
+};
+
+
+// Add timetable slot
+// ======================
+// ADD SLOT
+// ======================
+const addSlot = () => {
+  if (!timetableClass.value || !timetableCourse.value || !timetableTeacher.value || !timetableRoom.value || !timetableDay.value || !timetableTime.value) {
+    return alert("Fill all fields");
+  }
+
+  const conflict = timetableDraft.value.some(slot =>
+    slot.day === timetableDay.value &&
+    slot.time === timetableTime.value &&
+    (
+      slot.teacher === timetableTeacher.value ||
+      slot.class === timetableClass.value ||
+      slot.room === timetableRoom.value
+    )
+  );
+
+  if (conflict) return alert("Conflict detected!");
+
+  timetableDraft.value.push({
+    class: timetableClass.value,
+    course: timetableCourse.value,
+    teacher: timetableTeacher.value,
+    room: timetableRoom.value,
+    day: timetableDay.value,
+    time: timetableTime.value,
+  });
+
+  timetableClass.value = "";
+  timetableCourse.value = "";
+  timetableTeacher.value = "";
+  timetableRoom.value = "";
+  timetableDay.value = "";
+  timetableTime.value = "";
+};
+
+
+
+// ======================
+// SAVE ALL
+// ======================
+const saveAllSlots = async () => {
+  await API.post("/timetable/bulk", timetableDraft.value);
+  timetableDraft.value = [];
+  fetchAll();
+};
+
+
+const startEditSlot = (slot) => {
+  editingSlotId.value = slot._id;
+  editSlot.value = { ...slot };
+};
+const updateSlot = async () => {
+  await API.put(`/timetable/${editingSlotId.value}`, editSlot.value);
+
+  editingSlotId.value = null;
+  fetchTimetable();
+};
+
+// ======================
+// DELETE
+// ======================
+const removeSlot = async (id) => {
+  if (confirm("Delete this slot?")) {
+    await API.delete(`/timetable/${id}`);
+    fetchAll();
+  }
+};
+
+
+
 
 const linkParent = async () => {
   try {
@@ -452,17 +500,23 @@ const approvePayment = async (id, status) => {
   fetchPayments();
 };
 
+const handleNewMessage = (msg) => {
+  console.log("New message:", msg);
+  alert(msg.title);
+};
+
 onMounted(() => {
   fetchData();
   fetchMessages();
   fetchPayments();
-  fetchTimetable();
+  fetchAll();
   fetchHistory();
 
-  socket.on("newMessage", (msg) => {
-  console.log("New message:", msg);
-  alert(msg.title);
+  socket.on("newMessage", handleNewMessage);
 });
+
+onUnmounted(() => {
+  socket.off("newMessage", handleNewMessage);
 });
 </script>
 
@@ -752,7 +806,7 @@ onMounted(() => {
               </select>
 
               <button @click="updateLink" class="btn success small">Save</button>
-              <button @click="removeLink" class="btn danger small">Delete</button>
+              <button @click="removeLink(h._id)" class="btn danger small">Delete</button>
             </div>
 
             <div v-else>
@@ -770,127 +824,91 @@ onMounted(() => {
         </section>
 
 
-    <section class="card">
-      <h3>Draft Timetable</h3>
+      <div class="dashboard">
+              <h1>Admin Timetable Manager</h1>
 
-      <div v-for="(slot, i) in timetableDraft" :key="i">
-        {{ slot.day }} - {{ slot.time }}
-      </div>
+              <!-- FORM -->
+              <section class="card">
+                <h2>Create Timetable</h2>
 
-      <button @click="saveAllSlots" class="btn success">
-        Save All
-      </button>
-  <h2 class="section-title">Manage Timetable</h2>
+                <div class="grid">
+                  <select v-model="timetableClass" class="input">
+                    <option disabled value="">Class</option>
+                    <option v-for="c in classes" :key="c._id" :value="c._id">{{ c.name }}</option>
+                  </select>
 
-  <div class="form-grid mb-4">
-    <select v-model="timetableCourse" class="input">
-      <option disabled value="">Select Course</option>
-      <option v-for="c in courses" :key="c._id" :value="c._id">{{ c.name }}</option>
-    </select>
+                  <select v-model="timetableCourse" class="input">
+                    <option disabled value="">Course</option>
+                    <option v-for="c in courses" :key="c._id" :value="c._id">{{ c.name }}</option>
+                  </select>
 
-    <select v-model="timetableTeacher" class="input">
-      <option disabled value="">Select Teacher</option>
-      <option v-for="u in users.filter(u => u.role==='teacher')" :key="u._id" :value="u._id">{{ u.name }}</option>
-    </select>
+                  <select v-model="timetableTeacher" class="input">
+                    <option disabled value="">Teacher</option>
+                    <option v-for="u in users.filter(u=>u.role==='teacher')" :value="u._id">{{ u.name }}</option>
+                  </select>
 
-    <select v-model="timetableStudent" class="input">
-      <option value="">All Students</option>
-      <option v-for="u in users.filter(u => u.role==='student')" :key="u._id" :value="u._id">{{ u.name }}</option>
-    </select>
+                  <select v-model="timetableRoom" class="input">
+                    <option disabled value="">Room</option>
+                    <option v-for="r in rooms" :key="r._id" :value="r._id">{{ r.name }}</option>
+                  </select>
 
-    <select v-model="timetableDay" class="input">
-      <option disabled value="">Select Day</option>
-      <option v-for="d in days" :key="d">{{ d }}</option>
-    </select>
+                  <select v-model="timetableDay" class="input">
+                    <option disabled value="">Day</option>
+                    <option v-for="d in days" :key="d">{{ d }}</option>
+                  </select>
 
-    <select v-model="timetableTime" class="input">
-      <option disabled value="">Select Time</option>
-      <option v-for="t in times" :key="t">{{ t }}</option>
-    </select>
-  </div>
+                  <select v-model="timetableTime" class="input">
+                    <option disabled value="">Time</option>
+                    <option v-for="t in times" :key="t">{{ t }}</option>
+                  </select>
+                </div>
 
-  <button @click="addSlot" class="btn primary mb-4">Add Slot</button>
+                <button @click="addSlot" class="btn primary">Add Slot</button>
 
-  <!-- Timetable Table -->
+                <!-- DRAFT -->
+                <h3>Draft</h3>
+                <div v-for="(slot,i) in timetableDraft" :key="i">
+                  {{ slot.day }} | {{ slot.time }}
+                </div>
 
-  <tr v-for="slot in timetable" :key="slot._id">
+                <button @click="saveAllSlots" class="btn success">Save All</button>
+              </section>
 
-  <template v-if="editingSlotId === slot._id">
+              <!-- TABLE -->
+              <section class="card">
+                <h2>Timetable</h2>
 
-    <td>
-      <select v-model="editSlot.day" class="input">
-        <option v-for="d in days">{{ d }}</option>
-      </select>
-    </td>
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Day</th>
+                      <th>Time</th>
+                      <th>Class</th>
+                      <th>Course</th>
+                      <th>Teacher</th>
+                      <th>Room</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
 
-    <td>
-      <select v-model="editSlot.time" class="input">
-        <option v-for="t in times">{{ t }}</option>
-      </select>
-    </td>
+                  <tbody>
+                    <tr v-for="slot in timetable" :key="slot._id">
+                      <td>{{ slot.day }}</td>
+                      <td>{{ slot.time }}</td>
+                      <td>{{ slot.class?.name }}</td>
+                      <td>{{ slot.course?.name }}</td>
+                      <td>{{ slot.teacher?.name }}</td>
+                      <td>{{ slot.room?.name }}</td>
 
-    <td>
-      <select v-model="editSlot.course" class="input">
-        <option v-for="c in courses" :value="c._id">{{ c.name }}</option>
-      </select>
-    </td>
+                      <td>
+                        <button @click="removeSlot(slot._id)" class="btn danger small">Delete</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </section>
+            </div>
 
-    <td>
-      <select v-model="editSlot.teacher" class="input">
-        <option v-for="u in users.filter(u=>u.role==='teacher')" :value="u._id">
-          {{ u.name }}
-        </option>
-      </select>
-    </td>
-
-    <td>
-      <button @click="updateSlot" class="btn success small">Save</button>
-    </td>
-
-  </template>
-
-  <template v-else>
-
-    <td>{{ slot.day }}</td>
-    <td>{{ slot.time }}</td>
-    <td>{{ slot.course?.name }}</td>
-    <td>{{ slot.teacher?.name }}</td>
-
-    <td>
-      <button @click="startEditSlot(slot)" class="btn primary small">Edit</button>
-      <button @click="removeSlot(slot._id)" class="btn danger small">Delete</button>
-    </td>
-
-  </template>
-
-</tr>
-  <div class="table-wrapper">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Day</th>
-          <th>Time</th>
-          <th>Course</th>
-          <th>Teacher</th>
-          <th>Student</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="slot in timetable" :key="slot._id">
-          <td>{{ slot.day }}</td>
-          <td>{{ slot.time }}</td>
-          <td>{{ slot.course?.name }}</td>
-          <td>{{ slot.teacher?.name }}</td>
-          <td>{{ slot.student?.name || "All" }}</td>
-          <td>
-            <button @click="removeSlot(slot._id)" class="btn danger small">Delete</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</section>
 
     <!-- PAYMENTS -->
     <section class="card">
