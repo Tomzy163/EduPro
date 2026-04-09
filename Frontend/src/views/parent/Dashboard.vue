@@ -2,6 +2,7 @@
 import { ref, onMounted } from "vue";
 import API from "../../services/api";
 import { createPayment } from "../../services/paymentService";
+import Navbar from "@/components/Navbar.vue";
 import Notifications from "../../components/Notifications.vue";
 import socket from "@/socket";
 
@@ -57,6 +58,7 @@ onMounted(fetchData);
 </script>
 
 <template>
+  <Navbar />
   <div class="dashboard">
     <h1>Parent Dashboard</h1>
     <Notifications />
