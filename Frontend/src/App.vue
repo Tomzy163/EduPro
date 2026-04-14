@@ -1,44 +1,45 @@
 <script setup>
+import { computed } from "vue";
 import { useRoute } from "vue-router";
-// import Sidebar from "./components/Sidebar.vue";
-// import Navbar from "./components/Navbar.vue";
 
 const route = useRoute();
+
+const authRoutes = new Set([
+  "/",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+]);
+
+const showShell = computed(() => !authRoutes.has(route.path));
 </script>
 
 <template>
-  <div>
-    <!-- ❌ Hide on login/register pages -->
-    <div v-if="route.path !== '/' && route.path !== '/register' && route.path !== '/forgot-password' && route.path !== '/reset-password'" class="flex">
-      
-      <!-- <Sidebar /> -->
-
-      <div class="flex-1 bg-gray-100 min-h-screen">
-        <!-- <Navbar /> -->
-
-        <div class="p-6">
-          <router-view />
-        </div>
+  <main class="app-shell">
+    <section v-if="showShell" class="dashboard-shell">
+      <div class="dashboard-shell__content">
+        <router-view />
       </div>
-    </div>
+    </section>
 
-    <!-- ✅ Only show page (no sidebar/navbar) -->
-    <div v-else>
-      <router-view />
-    </div>
-  </div>
+    <router-view v-else />
+  </main>
 </template>
 
-<style>
-input, select {
-  display: block;
-  margin: 5px 0;
-  padding: 8px;
+<style scoped>
+.app-shell {
+  min-height: 100vh;
 }
 
-button {
-  padding: 8px;
-  margin-top: 5px;
-  cursor: pointer;
+.dashboard-shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(14, 165, 233, 0.12), transparent 32%),
+    radial-gradient(circle at bottom right, rgba(245, 158, 11, 0.14), transparent 24%),
+    linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
+}
+
+.dashboard-shell__content {
+  min-height: 100vh;
 }
 </style>

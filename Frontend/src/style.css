@@ -1,22 +1,51 @@
-/* Custom global styles */
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
 
-/* body {
-  background-color: #f3f4f6; /* light gray */
-  /* margin: 0; */
-  /* padding: 0; */
-/* } */
-
-/* a { */
-  /* text-decoration: none; */
-/* } */
-
-/* button {
-  cursor: pointer;
-  transition: all 0.2s ease;
+:root {
+  color-scheme: light;
+  font-family: "Source Sans 3", sans-serif;
+  color: #10213a;
+  background:
+    radial-gradient(circle at top, rgba(59, 130, 246, 0.08), transparent 28%),
+    linear-gradient(180deg, #f7fbff 0%, #edf4ff 100%);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-button:hover {
-  opacity: 0.9;
-/* } */ 
+* {
+  box-sizing: border-box;
+}
 
-@import "tailwindcss";
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  font-family: inherit;
+  color: inherit;
+  background: transparent;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}

@@ -1,468 +1,400 @@
 <script setup>
-import { ref, onMounted, computed, onUnmounted, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import Chart from "chart.js/auto";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import Chart from "chart.js/auto";
-import { getStudentResults } from "../../services/resultService";
-import { getAttendance } from "../../services/attendanceService";
-import PerformanceChart from "../../components/PerformanceChart.vue";
 import Navbar from "@/components/Navbar.vue";
-import AttendanceChart from "../../components/AttendanceChart.vue";
-import Notifications from "../../components/Notifications.vue";
-import UserTimetable from "../../components/UserTimetable.vue";
+import Notifications from "@/components/Notifications.vue";
+import PerformanceChart from "@/components/PerformanceChart.vue";
+import AttendanceChart from "@/components/AttendanceChart.vue";
+import UserTimetable from "@/components/UserTimetable.vue";
+import { getStudentResults } from "@/services/resultService";
+import { getAttendance } from "@/services/attendanceService";
 import socket from "@/socket";
-
-
 
 const results = ref([]);
 const attendance = ref([]);
-const user = JSON.parse(sessionStorage.getItem("user"));
-let trendChart = null;
 const search = ref("");
 const filterGrade = ref("");
+const chartCanvas = ref(null);
 
+let trendChart = null;
 
+const user = (() => {
+  try {
+    return JSON.parse(sessionStorage.getItem("user")) || {};
+  } catch {
+    return {};
+  }
+})();
 
-const filteredResults = computed(() => {
-  return results.value.filter(r => {
-    const matchesSearch = r.course?.name
-      ?.toLowerCase()
-      .includes(search.value.toLowerCase());
+const school = (() => {
+  try {
+    return JSON.parse(sessionStorage.getItem("school"));
+  } catch {
+    return null;
+  }
+})();
 
-    const matchesGrade =
-      !filterGrade.value || r.grade === filterGrade.value;
-
+const filteredResults = computed(() =>
+  results.value.filter((result) => {
+    const courseName = result.course?.name?.toLowerCase() || "";
+    const matchesSearch = courseName.includes(search.value.trim().toLowerCase());
+    const matchesGrade = !filterGrade.value || result.grade === filterGrade.value;
     return matchesSearch && matchesGrade;
-  });
-});
+  })
+);
 
-// Fetch results & attendance
-
-const fetchCourses = async () => {
-  const allCourses = await getCourses();
-  const user = JSON.parse(sessionStorage.getItem("user"));
-  courses.value = allCourses.filter(c => c.teacher?._id === user._id);
-};
-const fetchData = async () => {
-  results.value = await getStudentResults(user._id);
-  attendance.value = await getAttendance(user._id);
-};
 const averageScore = computed(() => {
   if (!results.value.length) return 0;
 
-  const total = results.value.reduce((sum, r) => sum + Number(r.score || 0), 0);
+  const total = results.value.reduce(
+    (sum, result) => sum + Number(result.score || 0),
+    0
+  );
+
   return Math.round(total / results.value.length);
 });
 
-
-const renderTrendChart = () => {
-  const ctx = document.getElementById("trendChart");
-
-  const labels = results.value.map(r =>
-    new Date(r.createdAt).toLocaleDateString()
-  );
-
-  const scores = results.value.map(r => r.score);
-
-  if (trendChart) trendChart.destroy();
-
-  trendChart = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels,
-      datasets: [
-        {
-          label: "Performance Trend",
-          data: scores,
-          fill: false,
-        },
-      ],
-    },
-  });
-};
-
-watch(results, renderTrendChart);
-
-const rankings = computed(() => {
-  return [...results.value]
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 5);
-});
-
-// Simple GPA logic
 const gpa = computed(() => {
-  if (!results.value.length) return 0;
+  if (!results.value.length) return "0.00";
 
-  const total = results.value.reduce((sum, r) => {
-    if (r.grade === "A") return sum + 4;
-    if (r.grade === "B") return sum + 3;
-    if (r.grade === "C") return sum + 2;
-    if (r.grade === "D") return sum + 1;
-    return sum;
-  }, 0);
+  const gradePoints = { A: 4, B: 3, C: 2, D: 1, F: 0 };
+  const total = results.value.reduce(
+    (sum, result) => sum + (gradePoints[result.grade] ?? 0),
+    0
+  );
 
   return (total / results.value.length).toFixed(2);
 });
 
-const formatDate = (date) => {
-  return new Date(date).toLocaleDateString();
-};
+const rankings = computed(() =>
+  [...results.value].sort((a, b) => b.score - a.score).slice(0, 5)
+);
+
+const attendanceCount = computed(() => attendance.value.length);
+
+const remark = computed(() => {
+  if (averageScore.value >= 80) return "Excellent performance";
+  if (averageScore.value >= 60) return "Good performance";
+  if (averageScore.value >= 50) return "Fair performance";
+  return "Needs improvement";
+});
+
+const formatDate = (date) => new Date(date).toLocaleDateString();
 
 const getGradeClass = (grade) => {
-  if (!grade) return "";
-
   if (grade === "A") return "success";
   if (grade === "B") return "primary";
   if (grade === "C") return "warning";
   return "danger";
 };
 
-const getRemark = () => {
-  if (averageScore.value >= 80) return "Excellent performance";
-  if (averageScore.value >= 60) return "Good performance";
-  if (averageScore.value >= 50) return "Fair performance";
-  return "Needs improvement";
+const renderTrendChart = () => {
+  if (!chartCanvas.value) return;
+
+  if (trendChart) trendChart.destroy();
+
+  trendChart = new Chart(chartCanvas.value, {
+    type: "line",
+    data: {
+      labels: results.value.map((result) =>
+        formatDate(result.createdAt || new Date())
+      ),
+      datasets: [
+        {
+          label: "Performance Trend",
+          data: results.value.map((result) => Number(result.score || 0)),
+          borderColor: "#0f766e",
+          backgroundColor: "rgba(15, 118, 110, 0.15)",
+          borderWidth: 3,
+          tension: 0.35,
+          fill: true,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+    },
+  });
+};
+
+const fetchData = async () => {
+  if (!user?._id) return;
+
+  try {
+    results.value = await getStudentResults(user._id);
+    attendance.value = await getAttendance(user._id);
+  } catch (error) {
+    console.error("Failed to load student dashboard data:", error);
+  }
 };
 
 const downloadReportCard = () => {
   const doc = new jsPDF();
+  const schoolName =
+    school?.name || user?.school || "EduPro International School";
 
-  const user = JSON.parse(sessionStorage.getItem("user"));
-
-  // HEADER
   doc.setFontSize(20);
-doc.text("🏫 Your School Name", 14, 15);
-
-doc.setFontSize(14);
-doc.text("Student Report Card", 14, 25);
-
-doc.setFontSize(11);
-doc.text(`Student: ${user.name}`, 14, 35);
-doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 42);
-
-  // TABLE DATA
-  const tableData = results.value.map(r => [
-    r.course?.name,
-    r.score,
-    r.grade,
-  ]);
-
-  const averageScore = computed(() => {
-  if (!results.value.length) return 0;
-
-  return Math.round(
-    results.value.reduce((a, b) => a + (b.score || 0), 0) /
-    results.value.length
-  );
-});
+  doc.text(schoolName, 14, 18);
+  doc.setFontSize(14);
+  doc.text("Student Report Card", 14, 28);
+  doc.setFontSize(11);
+  doc.text(`Student: ${user.name || "Student"}`, 14, 38);
+  doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 45);
 
   autoTable(doc, {
-    startY: 40,
+    startY: 52,
     head: [["Course", "Score", "Grade"]],
-    body: tableData,
+    body: results.value.map((result) => [
+      result.course?.name || "Untitled Course",
+      result.score ?? "-",
+      result.grade ?? "-",
+    ]),
   });
 
-  // SUMMARY
-  doc.text(`Average Score: ${averageScore.value}`, 14, doc.lastAutoTable.finalY + 10);
-  doc.text(`GPA: ${gpa.value}`, 14, doc.lastAutoTable.finalY + 18);
-  doc.text(`Remark: ${getRemark()}`, 14, doc.lastAutoTable.finalY + 26);
-
-  // SAVE
+  const finalY = doc.lastAutoTable?.finalY || 70;
+  doc.text(`Average Score: ${averageScore.value}`, 14, finalY + 12);
+  doc.text(`GPA: ${gpa.value}`, 14, finalY + 20);
+  doc.text(`Remark: ${remark.value}`, 14, finalY + 28);
   doc.save("report-card.pdf");
 };
 
-onMounted(() => {
+const handleIncomingMessage = async () => {
+  await fetchData();
+};
+
+watch(results, renderTrendChart, { deep: true });
+
+onMounted(async () => {
+  await fetchData();
   renderTrendChart();
-  socket.on("message", (msg) => {
-    console.log(msg);
-    alert(msg.title);
-  });
+  socket.on("message", handleIncomingMessage);
 });
 
-onMounted(fetchCourses);
-onMounted(fetchData);
+onUnmounted(() => {
+  socket.off("message", handleIncomingMessage);
+  if (trendChart) {
+    trendChart.destroy();
+    trendChart = null;
+  }
+});
 </script>
 
 <template>
-  
-    <Navbar/>
+  <Navbar />
 
-  <div class="dashboard">
-    <h1 class="page-title">Student Dashboard</h1>
+  <div class="dashboard student-dashboard">
+    <header class="dashboard-header">
+      <div>
+        <h1 class="page-title">Student Dashboard</h1>
+        <p class="page-subtitle">
+          Track academic progress, attendance, and timetable in a cleaner report view.
+        </p>
+      </div>
+      <button @click="downloadReportCard" class="btn btn-success">
+        Download Report Card
+      </button>
+    </header>
 
     <Notifications />
 
     <section class="grid-3">
-  <div class="stat-card">
-    <h3>Average Score</h3>
-    <p>{{ averageScore }}</p>
-  </div>
-
-  <div class="stat-card">
-    <h3>GPA</h3>
-    <p>{{ gpa }}</p>
-  </div>
-
-  <div class="stat-card">
-    <h3>Total Subjects</h3>
-    <p>{{ results.length }}</p>
-  </div>
-</section>
-
-    <section class="card">
-      <h2 class="section-title">Performance Trend</h2>
-      <canvas id="trendChart"></canvas>
+      <div class="stat-card accent-teal">
+        <p>Average Score</p>
+        <h3>{{ averageScore }}</h3>
+      </div>
+      <div class="stat-card accent-gold">
+        <p>GPA</p>
+        <h3>{{ gpa }}</h3>
+      </div>
+      <div class="stat-card accent-slate">
+        <p>Attendance Records</p>
+        <h3>{{ attendanceCount }}</h3>
+      </div>
     </section>
 
-    <section class="card">
-  <h2 class="section-title">Top Performance</h2>
-
-  <ul class="ranking">
-    <li v-for="(r, index) in rankings" :key="r._id">
-      <span>#{{ index + 1 }}</span>
-      <span>{{ r.course?.name }}</span>
-      <strong>{{ r.score }}</strong>
-    </li>
-  </ul>
-</section>
-
-    <!-- TIMETABLE -->
-    <section class="card">
-      <h2 class="section-title">My Timetable</h2>
-      <UserTimetable />
-    </section>
-
-    <div class="stats-grid">
-          <div class="stat-card">
-            <p>Total Courses</p>
-            <h3>{{ results.length }}</h3>
-          </div>
-
-          <div class="stat-card">
-            <p>Average Score</p>
-            <h3>
-              {{
-                Math.round(
-                  results.reduce((a, b) => a + (b.score || 0), 0) /
-                  (results.length || 1)
-                )
-              }}
-            </h3>
-          </div>
-
-          <div class="stat-card">
-            <p>Attendance</p>
-            <h3>{{ attendance.length }}</h3>
-          </div>
+    <section class="card panel">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Performance Trend</h2>
+          <p class="section-copy">A quick look at how your recent scores are moving over time.</p>
         </div>
+        <div class="remark-pill">{{ remark }}</div>
+      </div>
+      <div class="chart-frame">
+        <canvas ref="chartCanvas"></canvas>
+      </div>
+    </section>
 
-    <!-- CHARTS -->
     <section class="grid-2">
-      <div class="card">
-        <h2 class="section-title">Performance</h2>
+      <div class="card panel">
+        <h2 class="section-title">Top Performance</h2>
+        <ul class="ranking">
+          <li v-for="(result, index) in rankings" :key="result._id">
+            <span class="rank-index">#{{ index + 1 }}</span>
+            <span class="rank-course">{{ result.course?.name }}</span>
+            <strong>{{ result.score }}</strong>
+          </li>
+        </ul>
+      </div>
+
+      <div class="card panel">
+        <h2 class="section-title">My Timetable</h2>
+        <UserTimetable />
+      </div>
+    </section>
+
+    <section class="grid-2">
+      <div class="card panel">
+        <h2 class="section-title">Performance Overview</h2>
         <PerformanceChart :results="results" />
       </div>
 
-      <div class="card">
-        <h2 class="section-title">Attendance</h2>
+      <div class="card panel">
+        <h2 class="section-title">Attendance Overview</h2>
         <AttendanceChart :attendance="attendance" />
       </div>
     </section>
 
-    <!-- RESULTS TABLE -->
-    <section class="card">
-      <h2 class="section-title">My Results</h2>
-
-      <div class="row mb-2">
-          <input
-            v-model="search"
-            placeholder="Search course..."
-            class="input"
-          />
-
-          <select v-model="filterGrade" class="input">
-            <option value="">All Grades</option>
-            <option value="A">A</option>
-            <option value="B">B</option>
-            <option value="C">C</option>
-          </select>
+    <section class="card panel">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">My Results</h2>
+          <p class="section-copy">Filter by subject name or grade to find a record quickly.</p>
         </div>
+      </div>
+
+      <div class="row filters">
+        <input v-model="search" placeholder="Search course..." class="input" />
+        <select v-model="filterGrade" class="input">
+          <option value="">All Grades</option>
+          <option value="A">A</option>
+          <option value="B">B</option>
+          <option value="C">C</option>
+          <option value="D">D</option>
+          <option value="F">F</option>
+        </select>
+      </div>
 
       <div v-if="filteredResults.length === 0" class="empty">
-          No results found
-        </div>
+        No results found for the current filter.
+      </div>
 
       <div v-else class="table-wrapper">
         <table class="table">
           <thead>
-            <tr v-for="r in filteredResults" :key="r._id">
+            <tr>
               <th>Course</th>
               <th>Score</th>
               <th>Grade</th>
               <th>Date</th>
             </tr>
           </thead>
-
           <tbody>
-            <tr v-for="r in results" :key="r._id">
-              <td>{{ r.course?.name }}</td>
-              <td>{{ r.score }}</td>
+            <tr v-for="result in filteredResults" :key="result._id">
+              <td>{{ result.course?.name || "Untitled Course" }}</td>
+              <td>{{ result.score }}</td>
               <td>
-                <span class="badge" :class="getGradeClass(r.grade)">
-                  {{ r.grade }}
+                <span class="badge" :class="getGradeClass(result.grade)">
+                  {{ result.grade || "-" }}
                 </span>
               </td>
-              <td>{{ formatDate(r.createdAt) }}</td>
+              <td>{{ formatDate(result.createdAt) }}</td>
             </tr>
           </tbody>
         </table>
       </div>
     </section>
-    <button @click="downloadReportCard" class="btn success">
-      Download Report Card
-    </button>
   </div>
 </template>
 
 <style scoped>
-.grid-3 {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
-  gap: 15px;
+.student-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.stat-card {
-  background: white;
-  padding: 15px;
-  border-radius: 12px;
-  text-align: center;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+.dashboard-header,
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
 }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
-  gap: 10px;
+.panel {
+  padding: 24px;
 }
 
-.stat-card {
-  background: white;
-  padding: 15px;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
-  text-align: center;
+.section-copy {
+  margin: 6px 0 0;
+  color: var(--text-soft);
 }
 
-.stat-card h3 {
-  font-size: 20px;
-  margin-top: 5px;
+.chart-frame {
+  position: relative;
+  min-height: 320px;
 }
 
-.empty {
-  text-align: center;
-  padding: 20px;
-  color: #6b7280;
-}
-
-.badge {
-  background: #2563eb;
-  color: white;
-  padding: 4px 8px;
+.remark-pill {
+  padding: 10px 14px;
   border-radius: 999px;
-}
-
-.stat-card h3 {
-  font-size: 14px;
-  color: #6b7280;
-}
-
-.stat-card p {
-  font-size: 22px;
-  font-weight: bold;
+  background: rgba(15, 118, 110, 0.1);
+  color: #0f766e;
+  font-weight: 700;
 }
 
 .ranking {
   list-style: none;
+  margin: 0;
   padding: 0;
 }
 
 .ranking li {
-  display: flex;
-  justify-content: space-between;
-  padding: 10px;
-  border-bottom: 1px solid #eee;
-}
-
-.grid-2 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  grid-template-columns: 64px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
 }
 
-.empty {
-  padding: 20px;
-  text-align: center;
-  color: #6b7280;
+.ranking li:last-child {
+  border-bottom: none;
 }
 
-/* Badge colors */
-.badge.success { background: #16a34a; }
-.badge.primary { background: #2563eb; }
-.badge.warning { background: #f59e0b; }
-.badge.danger  { background: #dc2626; }
+.rank-index {
+  color: var(--text-soft);
+  font-weight: 700;
+}
 
-.badge {
-  padding: 4px 10px;
-  border-radius: 999px;
-  color: white;
-  font-size: 12px;
+.rank-course {
   font-weight: 600;
 }
 
-/* Responsive */
+.filters {
+  margin-bottom: 18px;
+}
+
+.accent-teal {
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.12), #ffffff 80%);
+}
+
+.accent-gold {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), #ffffff 80%);
+}
+
+.accent-slate {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.14), #ffffff 80%);
+}
+
 @media (max-width: 768px) {
-  .grid-2 {
-    grid-template-columns: 1fr;
+  .dashboard-header,
+  .section-head {
+    flex-direction: column;
   }
 }
-.dashboard { 
-  display: flex; 
-  flex-direction: column; 
-  gap: 20px; 
-  padding: 1rem; 
-  background: #f3f4f6; 
-  min-height: 100vh; 
-}
-.page-title { 
-  font-size: 2rem; 
-  font-weight: 700; 
-  color: #1f2937; 
-}
-.card { 
-  background: white; 
-  padding: 2rem; 
-  border-radius: 12px; 
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
-}
-.section-title { 
-  font-weight: 600; 
-  margin-bottom: 1rem; 
-  color: #111827; 
-}
-.table-wrapper { 
-  overflow-x: auto; 
-}
-.table { 
-  width: 100%; 
-  border-collapse: collapse; 
-}
-.table th, .table td { 
-  padding: 0.75rem 1rem; 
-  border-bottom: 1px solid #e5e7eb; 
-}
-.table th { 
-  background: #f9fafb; 
-  font-weight: 600; 
-  text-align: left; 
-  }
 </style>

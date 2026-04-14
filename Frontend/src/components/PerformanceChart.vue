@@ -1,47 +1,65 @@
 <script setup>
-import { onMounted, ref } from "vue";
+import { onMounted, onUnmounted, ref, watch } from "vue";
 import Chart from "chart.js/auto";
 
 const props = defineProps({
-  results: Array,       // for PerformanceChart
-  attendance: Array,    // for AttendanceChart
+  results: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const canvasRef = ref(null);
-
-
 let chartInstance = null;
 
-onMounted(() => {
-  if (!props.results) return;
+const renderChart = () => {
+  if (!canvasRef.value) return;
 
-  const labels = props.results.map(r => r.course?.name);
-  const scores = props.results.map(r => r.score);
+  if (chartInstance) {
+    chartInstance.destroy();
+  }
 
-  new Chart(canvasRef.value, {
+  chartInstance = new Chart(canvasRef.value, {
     type: "bar",
     data: {
-      labels,
+      labels: props.results.map((result) => result.course?.name || "Course"),
       datasets: [
         {
           label: "Scores",
-          data: scores,
-          backgroundColor: "#3b82f6",
+          data: props.results.map((result) => Number(result.score || 0)),
+          backgroundColor: "#1d4ed8",
+          borderRadius: 10,
         },
       ],
     },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+    },
   });
+};
+
+watch(() => props.results, renderChart, { deep: true });
+
+onMounted(renderChart);
+
+onUnmounted(() => {
+  if (chartInstance) {
+    chartInstance.destroy();
+    chartInstance = null;
+  }
 });
 </script>
 
 <template>
-  <canvas ref="canvasRef"></canvas>
+  <div class="chart-shell">
+    <canvas ref="canvasRef"></canvas>
+  </div>
 </template>
 
 <style scoped>
-canvas {
-  width: 100% !important;
-  max-height: 400px;
-  margin-top: 1rem;
+.chart-shell {
+  position: relative;
+  min-height: 280px;
 }
 </style>

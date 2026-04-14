@@ -5,7 +5,6 @@ import { getUsers, getPayments } from "../services/analyticsService";
 
 const users = ref([]);
 const payments = ref([]);
-
 const userChartRef = ref(null);
 const paymentChartRef = ref(null);
 
@@ -17,27 +16,25 @@ const stats = ref({
   teachers: 0,
   parents: 0,
   totalPayments: 0,
-  revenue: 0
+  revenue: 0,
 });
 
 onMounted(async () => {
   try {
     users.value = await getUsers();
     payments.value = await getPayments();
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.error("Failed to load admin analytics:", error);
   }
 
-  stats.value.students = users.value.filter(u => u.role === "student").length;
-  stats.value.teachers = users.value.filter(u => u.role === "teacher").length;
-  stats.value.parents = users.value.filter(u => u.role === "parent").length;
-
+  stats.value.students = users.value.filter((user) => user.role === "student").length;
+  stats.value.teachers = users.value.filter((user) => user.role === "teacher").length;
+  stats.value.parents = users.value.filter((user) => user.role === "parent").length;
   stats.value.totalPayments = payments.value.length;
   stats.value.revenue = payments.value
-    .filter(p => p.status === "approved")
-    .reduce((acc, p) => acc + Number(p.amount), 0);
+    .filter((payment) => payment.status === "approved")
+    .reduce((acc, payment) => acc + Number(payment.amount || 0), 0);
 
-  // destroy old charts safely
   if (userChart) userChart.destroy();
   if (paymentChart) paymentChart.destroy();
 
@@ -45,94 +42,109 @@ onMounted(async () => {
     type: "bar",
     data: {
       labels: ["Students", "Teachers", "Parents"],
-      datasets: [{
-        label: "Users",
-        data: [
-          stats.value.students,
-          stats.value.teachers,
-          stats.value.parents
-        ]
-      }]
-    }
+      datasets: [
+        {
+          label: "Users",
+          data: [
+            stats.value.students,
+            stats.value.teachers,
+            stats.value.parents,
+          ],
+          backgroundColor: ["#0f766e", "#1d4ed8", "#f59e0b"],
+          borderRadius: 14,
+        },
+      ],
+    },
+    options: {
+      plugins: {
+        legend: {
+          display: false,
+        },
+      },
+    },
   });
 
   paymentChart = new Chart(paymentChartRef.value, {
     type: "doughnut",
     data: {
       labels: ["Approved", "Pending", "Rejected"],
-      datasets: [{
-        data: [
-          payments.value.filter(p => p.status === "approved").length,
-          payments.value.filter(p => p.status === "pending").length,
-          payments.value.filter(p => p.status === "rejected").length
-        ]
-      }]
-    }
+      datasets: [
+        {
+          data: [
+            payments.value.filter((payment) => payment.status === "approved").length,
+            payments.value.filter((payment) => payment.status === "pending").length,
+            payments.value.filter((payment) => payment.status === "rejected").length,
+          ],
+          backgroundColor: ["#15803d", "#f59e0b", "#dc2626"],
+        },
+      ],
+    },
   });
 });
 </script>
 
 <template>
-  <div class="analytics-container">
-    <h2>Analytics</h2>
+  <section class="analytics card">
+    <div>
+      <h2 class="section-title">School Analytics</h2>
+      <p class="analytics-copy">Live counts for users, payments, and total approved revenue.</p>
+    </div>
 
     <div class="stats-grid">
-      <div class="stat-card"><h3>Students</h3><p>{{ stats.students }}</p></div>
-      <div class="stat-card"><h3>Teachers</h3><p>{{ stats.teachers }}</p></div>
-      <div class="stat-card"><h3>Payments</h3><p>{{ stats.totalPayments }}</p></div>
-      <div class="stat-card"><h3>Revenue</h3><p>₦{{ stats.revenue }}</p></div>
+      <div class="stat-card">
+        <p>Students</p>
+        <h3>{{ stats.students }}</h3>
+      </div>
+      <div class="stat-card">
+        <p>Teachers</p>
+        <h3>{{ stats.teachers }}</h3>
+      </div>
+      <div class="stat-card">
+        <p>Parents</p>
+        <h3>{{ stats.parents }}</h3>
+      </div>
+      <div class="stat-card">
+        <p>Payments</p>
+        <h3>{{ stats.totalPayments }}</h3>
+      </div>
+      <div class="stat-card">
+        <p>Revenue</p>
+        <h3>&#8358;{{ stats.revenue }}</h3>
+      </div>
     </div>
 
     <div class="charts-grid">
-      <div class="chart-card"><canvas ref="userChartRef"></canvas></div>
-      <div class="chart-card"><canvas ref="paymentChartRef"></canvas></div>
+      <div class="chart-card">
+        <canvas ref="userChartRef"></canvas>
+      </div>
+      <div class="chart-card">
+        <canvas ref="paymentChartRef"></canvas>
+      </div>
     </div>
-  </div>
+  </section>
 </template>
 
 <style scoped>
-.analytics-container h2 {
-  font-size: 1.75rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
+.analytics {
+  padding: 24px;
 }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.stat-card {
-  background: white;
-  padding: 1rem;
-  border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-  text-align: center;
-}
-
-.stat-card h3 {
-  font-size: 1rem;
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-}
-
-.stat-card p {
-  font-size: 1.25rem;
-  font-weight: 600;
+.analytics-copy {
+  margin: 6px 0 0;
+  color: var(--text-soft);
 }
 
 .charts-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
+  margin-top: 18px;
 }
 
 .chart-card {
-  background: white;
-  padding: 1rem;
-  border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  background: #fff;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 20px;
+  padding: 18px;
 }
 </style>

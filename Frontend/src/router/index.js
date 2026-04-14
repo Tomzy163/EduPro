@@ -10,13 +10,11 @@ import TeacherDashboard from "../views/teacher/Dashboard.vue";
 import StudentDashboard from "../views/student/Dashboard.vue";
 import ParentDashboard from "../views/parent/Dashboard.vue";
 
-// ✅ DEFINE ROUTES FIRST
 const routes = [
   { path: "/", component: Login },
   { path: "/register", component: Register },
   { path: "/forgot-password", component: ForgotPassword },
   { path: "/reset-password", component: ResetPassword },
-
   {
     path: "/dashboard/admin",
     component: AdminDashboard,
@@ -37,43 +35,51 @@ const routes = [
     component: ParentDashboard,
     meta: { requiresAuth: true, role: "parent" },
   },
-
   { path: "/:pathMatch(.*)*", redirect: "/" },
 ];
 
-// ✅ CREATE ROUTER
 const router = createRouter({
   history: createWebHistory(),
   routes,
 });
 
-// ✅ NOW USE router
-router.beforeEach((to, from, next) => {
-  const user = JSON.parse(sessionStorage.getItem("user"));
+const getSafeStoredUser = () => {
+  try {
+    const rawUser = sessionStorage.getItem("user");
+    return rawUser ? JSON.parse(rawUser) : null;
+  } catch {
+    return null;
+  }
+};
+
+const getDashboardRouteForRole = (role) => {
+  switch (role) {
+    case "admin":
+      return "/dashboard/admin";
+    case "teacher":
+      return "/dashboard/teacher";
+    case "student":
+      return "/dashboard/student";
+    case "parent":
+      return "/dashboard/parent";
+    default:
+      return "/";
+  }
+};
+
+router.beforeEach((to, _from, next) => {
+  const user = getSafeStoredUser();
   const token = sessionStorage.getItem("token");
 
-  if (to.meta.requiresAuth) {
-    if (!token || !user) {
-      return next("/");
-    }
-
-    if (to.meta.role && user.role !== to.meta.role) {
-      switch (user.role) {
-        case "admin":
-          return next("/dashboard/admin");
-        case "teacher":
-          return next("/dashboard/teacher");
-        case "student":
-          return next("/dashboard/student");
-        case "parent":
-          return next("/dashboard/parent");
-        default:
-          return next("/");
-      }
-    }
+  if (to.meta.requiresAuth && (!token || !user)) {
+    return next("/");
   }
 
-  next();
+  if (to.meta.role && user?.role !== to.meta.role) {
+    return next(getDashboardRouteForRole(user?.role));
+  }
+
+  return next();
 });
 
 export default router;

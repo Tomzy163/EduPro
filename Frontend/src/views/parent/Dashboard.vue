@@ -1,162 +1,142 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 import API from "../../services/api";
 import { createPayment } from "../../services/paymentService";
 import Navbar from "@/components/Navbar.vue";
-import Notifications from "../../components/Notifications.vue";
+import Notifications from "@/components/Notifications.vue";
 import socket from "@/socket";
-
-
-
 
 const children = ref([]);
 const selectedChild = ref("");
 const results = ref([]);
-
-// Payment
 const amount = ref("");
 const receipt = ref(null);
 
-const user = JSON.parse(sessionStorage.getItem("user"));
+const user = (() => {
+  try {
+    return JSON.parse(sessionStorage.getItem("user")) || {};
+  } catch {
+    return {};
+  }
+})();
 
-// Fetch children
 const fetchData = async () => {
   const res = await API.get("/users");
-  const parent = res.data.find(u => u._id === user._id);
+  const parent = res.data.find((item) => item._id === user._id);
   children.value = parent?.children || [];
 };
-onMounted(() => {
-  socket.on("message", (msg) => {
-    console.log(msg);
-    alert(msg.title);
-  });
-});
 
-// Get child results
 const getResults = async () => {
   if (!selectedChild.value) return;
   const res = await API.get(`/results/student/${selectedChild.value}`);
   results.value = res.data;
 };
 
-// Handle file upload
-const handleFile = (e) => {
-  receipt.value = e.target.files[0];
+const handleFile = (event) => {
+  receipt.value = event.target.files[0];
 };
 
-// Submit payment
 const submitPayment = async () => {
+  if (!amount.value || !receipt.value) {
+    alert("Enter an amount and upload a receipt.");
+    return;
+  }
+
   const formData = new FormData();
   formData.append("amount", amount.value);
   formData.append("receipt", receipt.value);
 
   await createPayment(formData);
+  amount.value = "";
+  receipt.value = null;
   alert("Payment submitted");
 };
 
-onMounted(fetchData);
+const handleMessage = (message) => {
+  if (message?.title) {
+    alert(message.title);
+  }
+};
+
+onMounted(async () => {
+  await fetchData();
+  socket.on("message", handleMessage);
+});
+
+onUnmounted(() => {
+  socket.off("message", handleMessage);
+});
 </script>
 
 <template>
   <Navbar />
-  <div class="dashboard">
-    <h1>Parent Dashboard</h1>
+
+  <div class="dashboard parent-dashboard">
+    <header>
+      <h1 class="page-title">Parent Dashboard</h1>
+      <p class="page-subtitle">
+        Follow your child&rsquo;s results and submit payment receipts from one place.
+      </p>
+    </header>
+
     <Notifications />
 
-    <!-- Select Child -->
-    <div class="card">
-      <h3>Select Child</h3>
-      <select v-model="selectedChild" @change="getResults">
+    <section class="card panel">
+      <h2 class="section-title">Select Child</h2>
+      <select v-model="selectedChild" @change="getResults" class="input">
         <option disabled value="">Select Child</option>
-        <option v-for="c in children" :key="c._id" :value="c._id">{{ c.name }}</option>
+        <option v-for="child in children" :key="child._id" :value="child._id">
+          {{ child.name }}
+        </option>
       </select>
-    </div>
+    </section>
 
-    <!-- Child Results -->
-    <div class="card">
-      <h3>Child Results</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Course</th>
-            <th>Status</th>
-            <th>Date</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="r in results" :key="r._id">
-            <td>{{ r.course?.name }}</td>
-            <td>{{ r.status }}</td>
-            <td>{{ new Date(r.date).toLocaleDateString() }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <section class="card panel">
+      <h2 class="section-title">Child Results</h2>
+      <div v-if="results.length === 0" class="empty">
+        Select a child to view recent results.
+      </div>
+      <div v-else class="table-wrapper">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Course</th>
+              <th>Score</th>
+              <th>Grade</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="result in results" :key="result._id">
+              <td>{{ result.course?.name }}</td>
+              <td>{{ result.score }}</td>
+              <td>{{ result.grade }}</td>
+              <td>{{ new Date(result.createdAt).toLocaleDateString() }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
-    <!-- Payment Section -->
-    <div class="card">
-      <h3>Make Payment</h3>
-      <input v-model="amount" placeholder="Amount" type="number" />
-      <input type="file" @change="handleFile" />
-      <button @click="submitPayment">Upload Receipt</button>
-    </div>
+    <section class="card panel">
+      <h2 class="section-title">Make Payment</h2>
+      <div class="form-grid">
+        <input v-model="amount" placeholder="Amount" type="number" class="input" />
+        <input type="file" @change="handleFile" class="input" />
+      </div>
+      <button @click="submitPayment" class="btn btn-primary">Upload Receipt</button>
+    </section>
   </div>
 </template>
 
 <style scoped>
-.dashboard h1 {
-  font-size: 1.75rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
+.parent-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.card {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-  margin-bottom: 1.5rem;
-}
-
-.card h3 {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin-bottom: 0.75rem;
-}
-
-select, input {
-  width: 100%;
-  padding: 0.5rem;
-  margin-bottom: 0.75rem;
-  border-radius: 6px;
-  border: 1px solid #d1d5db;
-}
-
-button {
-  background-color: #3b82f6;
-  color: white;
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-button:hover {
-  background-color: #2563eb;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th, td {
-  padding: 0.6rem 0.75rem;
-  border-bottom: 1px solid #e5e7eb;
-  text-align: left;
-}
-
-th {
-  background-color: #f9fafb;
+.panel {
+  padding: 24px;
 }
 </style>

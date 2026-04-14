@@ -1,17 +1,9 @@
-import { io } from "socket.io-client";
+import socket, { connectSocket } from "../socket";
 
-const socket = io("http://localhost:5000");
+export { connectSocket };
 
-// Register user after login
-export const connectSocket = (userId) => {
-  if (userId) {
-    socket.emit("register", userId);
-  }
-};
-
-// Listen for messages
 export const onMessage = (callback) => {
-  socket.on("newMessage", callback);
+  socket.on("message", callback);
 };
 
 export default socket;

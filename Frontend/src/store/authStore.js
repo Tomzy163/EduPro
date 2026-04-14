@@ -1,54 +1,46 @@
-// store/authStore.js
 import { defineStore } from "pinia";
-import { login, register } from "../services/authService";
-import router from "../router"; // ✅ import router directly
+import { register } from "../services/authService";
+import router from "../router";
 import { connectSocket } from "../services/socket";
 import API from "../services/api";
 
-export const useAuthStore = defineStore("auth", {
-  state: () => {
-    // Safely parse stored user
-    let storedUser = null;
-    try {
-      const raw = sessionStorage.getItem("user");
-      storedUser = raw ? JSON.parse(raw) : null;
-    } catch {
-      storedUser = null;
-    }
+const getStoredUser = () => {
+  try {
+    const raw = sessionStorage.getItem("user");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
 
-    return {
-      user: storedUser,
-      token: sessionStorage.getItem("token") || null,
-    };
-  },
+export const useAuthStore = defineStore("auth", {
+  state: () => ({
+    user: getStoredUser(),
+    token: sessionStorage.getItem("token") || null,
+  }),
 
   actions: {
-async loginUser(credentials) {
- 
-  try {
-    console.log("Sending login request...");
-    const res = await API.post("/auth/login", credentials);
-    console.log("Response:", res);
+    async loginUser(credentials) {
+      try {
+        const res = await API.post("/auth/login", credentials);
+        const { user, token } = res.data;
 
-    this.user = res.data.user;
-    this.token = res.data.token;
+        this.user = user;
+        this.token = token;
 
-    sessionStorage.setItem("token", res.data.token);
-    sessionStorage.setItem("user", JSON.stringify(res.data.user));
+        sessionStorage.setItem("token", token);
+        sessionStorage.setItem("user", JSON.stringify(user));
 
-    connectSocket(res.data.user.id);
-
-    return res.data;
-  } catch (err) {
-    console.log("LOGIN ERROR:", err.response);
-    throw err.response?.data || { message: "Login failed" };
-  }
-},
+        connectSocket(user?._id || user?.id);
+        return res.data;
+      } catch (err) {
+        throw err.response?.data || { message: "Login failed" };
+      }
+    },
 
     async registerUser(data) {
       try {
-        const res = await register(data);
-        return res;
+        return await register(data);
       } catch (err) {
         throw err.response?.data || { message: "Register failed" };
       }
@@ -59,26 +51,7 @@ async loginUser(credentials) {
       this.token = null;
       sessionStorage.removeItem("user");
       sessionStorage.removeItem("token");
-      router.push("/"); // ✅ use imported router
+      router.push("/");
     },
   },
 });
-
-// sessionStorage.clear();
-
-// connectSocket(user.id);
-
-// switch (user.role) {
-//   case "admin":
-//     router.push("/dashboard/admin");
-//     break;
-//   case "teacher":
-//     router.push("/dashboard/teacher");
-//     break;
-//   case "student":
-//     router.push("/dashboard/student");
-//     break;
-//   case "parent":
-//     router.push("/dashboard/parent");
-//     break;
-// }
