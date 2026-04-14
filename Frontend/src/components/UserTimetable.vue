@@ -1,6 +1,7 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 import API from "../services/api";
+import socket from "@/socket";
 
 const timetable = ref([]);
 const user = JSON.parse(sessionStorage.getItem("user"));
@@ -17,27 +18,15 @@ const times = [
   "02:00pm-03:00pm",
 ];
 
-// Fetch timetable
 const fetchTimetable = async () => {
   const res = await API.get("/timetable");
-
-  if (user.role === "teacher") {
-    timetable.value = res.data.filter(t => t.teacher?._id === user._id);
-  } else if (user.role === "student") {
-    timetable.value = res.data.filter(t =>
-      !t.student || t.student?._id === user._id
-    );
-  } else if (user.role === "parent") {
-    timetable.value = res.data; // or filter by children later
-  }
+  timetable.value = res.data;
 };
 
-// Get slot
 const getSlot = (day, time) => {
-  return timetable.value.find(t => t.day === day && t.time === time);
+  return timetable.value.find((slot) => slot.day === day && slot.time === time);
 };
 
-// Color generator (based on course)
 const getColor = (name) => {
   const colors = [
     "bg-blue", "bg-green", "bg-purple",
@@ -49,6 +38,14 @@ const getColor = (name) => {
 };
 
 onMounted(fetchTimetable);
+
+onMounted(() => {
+  socket.on("admin:update", fetchTimetable);
+});
+
+onUnmounted(() => {
+  socket.off("admin:update", fetchTimetable);
+});
 </script>
 
 <template>
@@ -77,13 +74,17 @@ onMounted(fetchTimetable);
             :class="getColor(getSlot(day, time).course?.name)"
           >
             <strong>{{ getSlot(day, time).course?.name }}</strong>
+            <small>{{ getSlot(day, time).name }}</small>
+            <small v-if="getSlot(day, time).location">
+              {{ getSlot(day, time).location }}
+            </small>
 
             <small v-if="user.role === 'student'">
               {{ getSlot(day, time).teacher?.name }}
             </small>
 
             <small v-if="user.role === 'teacher'">
-              Class
+              {{ getSlot(day, time).student?.name || "Assigned class slot" }}
             </small>
           </div>
 

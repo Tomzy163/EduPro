@@ -1,7 +1,7 @@
 <script setup>
-import { onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import API from "../../services/api";
-import { createPayment } from "../../services/paymentService";
+import { createPayment, getMyPayments } from "../../services/paymentService";
 import Navbar from "@/components/Navbar.vue";
 import Notifications from "@/components/Notifications.vue";
 import socket from "@/socket";
@@ -9,8 +9,13 @@ import socket from "@/socket";
 const children = ref([]);
 const selectedChild = ref("");
 const results = ref([]);
+const payments = ref([]);
 const amount = ref("");
 const receipt = ref(null);
+const fileInputKey = ref(0);
+const loading = ref(false);
+const statusMessage = ref("");
+const statusTone = ref("primary");
 
 const user = (() => {
   try {
@@ -20,36 +25,89 @@ const user = (() => {
   }
 })();
 
-const fetchData = async () => {
-  const res = await API.get("/users");
-  const parent = res.data.find((item) => item._id === user._id);
-  children.value = parent?.children || [];
+const selectedChildName = computed(() => {
+  return children.value.find((child) => child._id === selectedChild.value)?.name || "Selected child";
+});
+
+const approvedPayments = computed(() =>
+  payments.value.filter((payment) => payment.status === "approved").length
+);
+
+const showStatus = (message, tone = "primary") => {
+  statusMessage.value = message;
+  statusTone.value = tone;
+};
+
+const fetchChildren = async () => {
+  if (!user._id) {
+    return;
+  }
+
+  const res = await API.get(`/relationships/parent/${user._id}`);
+  children.value = res.data?.children || [];
+
+  const stillExists = children.value.some((child) => child._id === selectedChild.value);
+
+  if (!stillExists) {
+    selectedChild.value = children.value[0]?._id || "";
+  }
+};
+
+const fetchPayments = async () => {
+  payments.value = await getMyPayments();
 };
 
 const getResults = async () => {
-  if (!selectedChild.value) return;
+  if (!selectedChild.value) {
+    results.value = [];
+    return;
+  }
+
   const res = await API.get(`/results/student/${selectedChild.value}`);
   results.value = res.data;
 };
 
+const refreshDashboard = async () => {
+  await fetchChildren();
+  await fetchPayments();
+
+  if (selectedChild.value) {
+    await getResults();
+  }
+};
+
 const handleFile = (event) => {
-  receipt.value = event.target.files[0];
+  receipt.value = event.target.files[0] || null;
 };
 
 const submitPayment = async () => {
   if (!amount.value || !receipt.value) {
-    alert("Enter an amount and upload a receipt.");
+    showStatus("Enter an amount and upload a receipt.", "danger");
     return;
   }
 
-  const formData = new FormData();
-  formData.append("amount", amount.value);
-  formData.append("receipt", receipt.value);
+  loading.value = true;
+  statusMessage.value = "";
 
-  await createPayment(formData);
-  amount.value = "";
-  receipt.value = null;
-  alert("Payment submitted");
+  try {
+    const formData = new FormData();
+    formData.append("amount", amount.value);
+    formData.append("receipt", receipt.value);
+
+    await createPayment(formData);
+    amount.value = "";
+    receipt.value = null;
+    fileInputKey.value += 1;
+    await fetchPayments();
+    showStatus("Payment uploaded successfully.", "success");
+  } catch (error) {
+    showStatus(
+      error.response?.data?.message || "Unable to submit payment right now.",
+      "danger"
+    );
+  } finally {
+    loading.value = false;
+  }
 };
 
 const handleMessage = (message) => {
@@ -58,13 +116,33 @@ const handleMessage = (message) => {
   }
 };
 
+const handleAdminUpdate = async () => {
+  await refreshDashboard();
+};
+
+const handleAcademicUpdate = async () => {
+  if (selectedChild.value) {
+    await getResults();
+  }
+};
+
 onMounted(async () => {
-  await fetchData();
-  socket.on("message", handleMessage);
+  try {
+    await refreshDashboard();
+  } catch (error) {
+    console.error("Failed to load parent dashboard:", error);
+    showStatus("Unable to load parent dashboard data.", "danger");
+  }
+
+  socket.on("newMessage", handleMessage);
+  socket.on("admin:update", handleAdminUpdate);
+  socket.on("academic:update", handleAcademicUpdate);
 });
 
 onUnmounted(() => {
-  socket.off("message", handleMessage);
+  socket.off("newMessage", handleMessage);
+  socket.off("admin:update", handleAdminUpdate);
+  socket.off("academic:update", handleAcademicUpdate);
 });
 </script>
 
@@ -72,30 +150,60 @@ onUnmounted(() => {
   <Navbar />
 
   <div class="dashboard parent-dashboard">
-    <header>
-      <h1 class="page-title">Parent Dashboard</h1>
-      <p class="page-subtitle">
-        Follow your child&rsquo;s results and submit payment receipts from one place.
-      </p>
+    <header class="dashboard-header">
+      <div>
+        <h1 class="page-title">Parent Dashboard</h1>
+        <p class="page-subtitle">
+          Review your children, track result history, and monitor every payment submitted.
+        </p>
+      </div>
     </header>
 
     <Notifications />
 
-    <section class="card panel">
-      <h2 class="section-title">Select Child</h2>
-      <select v-model="selectedChild" @change="getResults" class="input">
-        <option disabled value="">Select Child</option>
-        <option v-for="child in children" :key="child._id" :value="child._id">
-          {{ child.name }}
-        </option>
-      </select>
+    <div v-if="statusMessage" class="status-banner" :class="`status-${statusTone}`">
+      {{ statusMessage }}
+    </div>
+
+    <section class="grid-3 parent-summary">
+      <article class="stat-card accent-slate">
+        <p>Linked Children</p>
+        <h3>{{ children.length }}</h3>
+      </article>
+      <article class="stat-card accent-teal">
+        <p>Result Records</p>
+        <h3>{{ results.length }}</h3>
+      </article>
+      <article class="stat-card accent-gold">
+        <p>Approved Payments</p>
+        <h3>{{ approvedPayments }}</h3>
+      </article>
     </section>
 
     <section class="card panel">
-      <h2 class="section-title">Child Results</h2>
-      <div v-if="results.length === 0" class="empty">
-        Select a child to view recent results.
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Child Result History</h2>
+          <p class="section-copy">
+            Switch between linked children and view the full academic record uploaded so far.
+          </p>
+        </div>
+        <select v-model="selectedChild" @change="getResults" class="input child-select">
+          <option disabled value="">Select Child</option>
+          <option v-for="child in children" :key="child._id" :value="child._id">
+            {{ child.name }}
+          </option>
+        </select>
       </div>
+
+      <div v-if="!selectedChild" class="empty">
+        No child is selected yet. Link a child from the admin dashboard to start viewing records.
+      </div>
+
+      <div v-else-if="results.length === 0" class="empty">
+        No results have been uploaded yet for {{ selectedChildName }}.
+      </div>
+
       <div v-else class="table-wrapper">
         <table class="table">
           <thead>
@@ -103,14 +211,16 @@ onUnmounted(() => {
               <th>Course</th>
               <th>Score</th>
               <th>Grade</th>
+              <th>Teacher</th>
               <th>Date</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="result in results" :key="result._id">
-              <td>{{ result.course?.name }}</td>
+              <td>{{ result.course?.name || "Course" }}</td>
               <td>{{ result.score }}</td>
               <td>{{ result.grade }}</td>
+              <td>{{ result.uploadedBy?.name || "Teacher" }}</td>
               <td>{{ new Date(result.createdAt).toLocaleDateString() }}</td>
             </tr>
           </tbody>
@@ -118,13 +228,66 @@ onUnmounted(() => {
       </div>
     </section>
 
-    <section class="card panel">
-      <h2 class="section-title">Make Payment</h2>
-      <div class="form-grid">
-        <input v-model="amount" placeholder="Amount" type="number" class="input" />
-        <input type="file" @change="handleFile" class="input" />
-      </div>
-      <button @click="submitPayment" class="btn btn-primary">Upload Receipt</button>
+    <section class="grid-2 parent-grid">
+      <section class="card panel">
+        <div class="section-head compact">
+          <div>
+            <h2 class="section-title">Make Payment</h2>
+            <p class="section-copy">
+              Upload a new payment receipt for review by the school admin.
+            </p>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <input v-model="amount" placeholder="Amount" type="number" class="input" />
+          <input :key="fileInputKey" type="file" @change="handleFile" class="input" />
+        </div>
+
+        <button @click="submitPayment" class="btn btn-primary" :disabled="loading">
+          {{ loading ? "Uploading..." : "Upload Receipt" }}
+        </button>
+      </section>
+
+      <section class="card panel">
+        <div class="section-head compact">
+          <div>
+            <h2 class="section-title">Payment History</h2>
+            <p class="section-copy">
+              Track pending, approved, and rejected payment submissions in one place.
+            </p>
+          </div>
+        </div>
+
+        <div v-if="payments.length === 0" class="empty">
+          No payment history yet.
+        </div>
+
+        <div v-else class="table-wrapper">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Receipt</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="payment in payments" :key="payment._id">
+                <td>{{ Number(payment.amount || 0).toLocaleString() }}</td>
+                <td>
+                  <span class="badge" :class="payment.status || 'pending'">
+                    {{ payment.status || "pending" }}
+                  </span>
+                </td>
+                <td>{{ payment.receipt ? "Uploaded" : "No file" }}</td>
+                <td>{{ new Date(payment.createdAt).toLocaleDateString() }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </section>
   </div>
 </template>
@@ -136,7 +299,78 @@ onUnmounted(() => {
   gap: 20px;
 }
 
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.parent-summary {
+  gap: 16px;
+}
+
+.parent-grid {
+  gap: 20px;
+}
+
 .panel {
   padding: 24px;
+}
+
+.child-select {
+  min-width: 220px;
+}
+
+.status-banner {
+  padding: 12px 16px;
+  border-radius: 14px;
+  font-weight: 600;
+}
+
+.status-success {
+  background: rgba(21, 128, 61, 0.12);
+  color: #166534;
+}
+
+.status-danger {
+  background: rgba(220, 38, 38, 0.12);
+  color: #991b1b;
+}
+
+.status-primary {
+  background: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+}
+
+.compact {
+  margin-bottom: 18px;
+}
+
+.badge.pending {
+  background: rgba(217, 119, 6, 0.14);
+  color: #92400e;
+}
+
+.badge.approved {
+  background: rgba(21, 128, 61, 0.14);
+  color: #166534;
+}
+
+.badge.rejected {
+  background: rgba(220, 38, 38, 0.14);
+  color: #991b1b;
+}
+
+@media (max-width: 768px) {
+  .dashboard-header,
+  .section-head {
+    flex-direction: column;
+  }
+
+  .child-select {
+    width: 100%;
+    min-width: 0;
+  }
 }
 </style>

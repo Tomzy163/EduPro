@@ -14,14 +14,14 @@ import { authorize } from "../middleware/roleMiddleware.js";
 
 const router = express.Router();
 
-router.post("/link", protect, linkParentToStudent);
+router.post("/link", protect, authorize("admin"), linkParentToStudent);
 
-router.get("/parent/:id", protect, getParentWithChildren);
-router.get("/student/:id", protect, getStudentWithParents);
-router.get("/history", protect, getLinkHistory);
+router.get("/parent/:id", protect, authorize("admin", "parent"), getParentWithChildren);
+router.get("/student/:id", protect, authorize("admin"), getStudentWithParents);
+router.get("/history", protect, authorize("admin"), getLinkHistory);
 
-router.delete("/:id", protect, deleteLink);
-router.put("/:id", protect, updateLink);
-router.delete("/", protect, deleteAllLinks);
+router.delete("/:id", protect, authorize("admin"), deleteLink);
+router.put("/:id", protect, authorize("admin"), updateLink);
+router.delete("/", protect, authorize("admin"), deleteAllLinks);
 
 export default router;

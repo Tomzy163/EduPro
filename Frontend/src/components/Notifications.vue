@@ -25,17 +25,12 @@ const handleMessage = async () => {
 
 onMounted(async () => {
   await refreshMessages();
-
-  if (user?._id) {
-    socket.emit("register", user._id);
-  }
-
-  socket.off("message", handleMessage);
-  socket.on("message", handleMessage);
+  socket.off("newMessage", handleMessage);
+  socket.on("newMessage", handleMessage);
 });
 
 onUnmounted(() => {
-  socket.off("message", handleMessage);
+  socket.off("newMessage", handleMessage);
 });
 </script>
 

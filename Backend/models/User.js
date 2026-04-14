@@ -31,6 +31,8 @@ const userSchema = new mongoose.Schema(
       ref: "User",
     },
 
+    parents: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+
     teacher: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

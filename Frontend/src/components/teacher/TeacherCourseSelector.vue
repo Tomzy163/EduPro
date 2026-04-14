@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { getCourses } from "@/services/courseService";
 import { uploadResult } from "@/services/resultService";
 import socket from "@/services/socket";
@@ -12,10 +12,25 @@ const score = ref("");
 const grade = ref("");
 const loading = ref(false);
 
+const getCurrentUserId = () => {
+  try {
+    const user = JSON.parse(sessionStorage.getItem("user"));
+    return user?._id || user?.id || "";
+  } catch {
+    return "";
+  }
+};
+
 const fetchCourses = async () => {
-  const user = JSON.parse(sessionStorage.getItem("user"));
-  const allCourses = await getCourses();
-  courses.value = allCourses.filter((course) => course.teacher?._id === user?._id);
+  try {
+    const currentUserId = getCurrentUserId();
+    const allCourses = await getCourses();
+    courses.value = allCourses.filter(
+      (course) => (course.teacher?._id || course.teacher?.id || course.teacher) === currentUserId
+    );
+  } catch (error) {
+    console.error("Failed to load teacher courses:", error);
+  }
 };
 
 const selectedCourseData = computed(() =>
@@ -36,6 +51,11 @@ watch(selectedCourse, () => {
 });
 
 const submitResult = async () => {
+  if (courses.value.length === 0) {
+    alert("No course has been assigned to this teacher yet. Ask the admin to assign your courses.");
+    return;
+  }
+
   if (!selectedStudent.value || !selectedCourse.value || !score.value || !grade.value) {
     alert("Fill all fields");
     return;
@@ -53,18 +73,30 @@ const submitResult = async () => {
 
     score.value = "";
     grade.value = "";
-    socket.emit("resultUpdated");
+  } catch (error) {
+    alert(error.response?.data?.message || "Failed to upload result.");
   } finally {
     loading.value = false;
   }
 };
 
-onMounted(fetchCourses);
+onMounted(() => {
+  fetchCourses();
+  socket.on("admin:update", fetchCourses);
+});
+
+onUnmounted(() => {
+  socket.off("admin:update", fetchCourses);
+});
 </script>
 
 <template>
   <section class="card selector-card">
     <h2 class="section-title">Upload Result</h2>
+
+    <p v-if="courses.length === 0" class="empty">
+      No course has been assigned to this teacher yet.
+    </p>
 
     <div class="form-grid">
       <select v-model="selectedCourse" class="input">

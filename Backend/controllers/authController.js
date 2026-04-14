@@ -5,25 +5,18 @@ import crypto from "crypto";
 import School from "../models/School.js";
 import nodemailer from "nodemailer";
 
-// Generate token
 const generateToken = (user) => {
   return jwt.sign(
-    { 
+    {
       id: user._id,
       role: user.role,
-      school: user.school
+      school: user.school,
     },
     process.env.JWT_SECRET,
     { expiresIn: "7d" }
   );
 };
 
-
-
-//
-// =======================
-// REGISTER SCHOOL + ADMIN
-// =======================
 export const register = async (req, res) => {
   try {
     const { name, email, password, school: schoolName } = req.body;
@@ -32,7 +25,6 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: "School is required" });
     }
 
-    // Check if school exists
     let school = await School.findOne({ name: schoolName.trim() });
 
     if (school) {
@@ -40,26 +32,23 @@ export const register = async (req, res) => {
         message: "School already exists. Please login.",
       });
     }
-    // token: generateToken(admin);
 
-    // Create school
     school = await School.create({ name: schoolName });
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create admin
     const admin = await User.create({
       name,
       email: email.toLowerCase(),
       password: hashedPassword,
       role: "admin",
-      school: school._id, // ✅ FIXED
+      school: school._id,
     });
 
     res.status(201).json({
       message: "School registered successfully",
       user: {
+        _id: admin._id,
         id: admin._id,
         name: admin.name,
         email: admin.email,
@@ -68,38 +57,28 @@ export const register = async (req, res) => {
       },
       token: generateToken(admin),
     });
-
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: error.message });
   }
 };
 
-//
-// =======================
-// LOGIN
-// =======================
 export const loginUser = async (req, res) => {
   try {
     const { email, password, school: schoolName } = req.body;
 
-    console.log("LOGIN BODY:", req.body);
-
     if (!email || !password || !schoolName) {
-      loading.value = false;
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    // Find school
     const school = await School.findOne({
-      name: { $regex: `^${schoolName}$`, $options: "i" }
+      name: { $regex: `^${schoolName}$`, $options: "i" },
     });
 
     if (!school) {
       return res.status(400).json({ message: "School not found" });
     }
 
-    // Find user
     const user = await User.findOne({
       email: email.toLowerCase(),
       school: school._id,
@@ -111,7 +90,6 @@ export const loginUser = async (req, res) => {
       });
     }
 
-    // Check password
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
@@ -120,6 +98,7 @@ export const loginUser = async (req, res) => {
 
     res.json({
       user: {
+        _id: user._id,
         id: user._id,
         name: user.name,
         email: user.email,
@@ -128,17 +107,12 @@ export const loginUser = async (req, res) => {
       },
       token: generateToken(user),
     });
-
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: error.message });
   }
 };
 
-//
-// =======================
-// ADMIN CREATES USERS
-// =======================
 export const registerUser = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
@@ -161,21 +135,14 @@ export const registerUser = async (req, res) => {
       email,
       password: hashedPassword,
       role,
-      school: req.user.school._id, // ✅ enforce school
+      school: req.user.school._id,
     });
 
     res.json(user);
-
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
-
-//
-// =======================
-// FORGOT PASSWORD
-// =======================
-// import School from "../models/School.js";
 
 export const forgotPassword = async (req, res) => {
   try {
@@ -187,13 +154,11 @@ export const forgotPassword = async (req, res) => {
     const user = await User.findOne({ email, school: schoolDoc._id });
     if (!user) return res.status(404).json({ message: "User not found in this school" });
 
-    // Generate reset token
     const token = crypto.randomBytes(32).toString("hex");
     user.resetToken = token;
-    user.resetTokenExpire = Date.now() + 15 * 60 * 1000; // 15 min
+    user.resetTokenExpire = Date.now() + 15 * 60 * 1000;
     await user.save();
 
-    // Nodemailer setup
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -206,26 +171,18 @@ export const forgotPassword = async (req, res) => {
       from: process.env.EMAIL_USER,
       to: user.email,
       subject: "Password Reset Link",
-      text: `Hello ${user.name},\n\nClick this link to reset your password:\n
-     ${process.env.CLIENT_URL}/reset-password?token=${token}\n
-      This link expires in 15 minutes.`,
+      text: `Hello ${user.name},\n\nClick this link to reset your password:\n${process.env.CLIENT_URL}/reset-password?token=${token}\nThis link expires in 15 minutes.`,
     };
 
     await transporter.sendMail(mailOptions);
 
     res.json({ message: "Reset link sent to your email" });
-
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: error.message });
   }
 };
 
-
-//
-// =======================
-// RESET PASSWORD
-// =======================
 export const resetPassword = async (req, res) => {
   try {
     const { token, password } = req.body;

@@ -1,7 +1,11 @@
 <script setup>
-import { ref, onMounted } from "vue";
-import { markAttendance } from "@/services/attendanceService";
-import API from "@/services/api";
+import { onMounted, onUnmounted, ref } from "vue";
+import {
+  getAttendanceList,
+  markAttendance,
+} from "@/services/attendanceService";
+import { getCourses } from "@/services/courseService";
+import socket from "@/socket";
 
 const students = ref([]);
 const courses = ref([]);
@@ -11,34 +15,74 @@ const student = ref("");
 const course = ref("");
 const status = ref("present");
 
-// FETCH DATA
+const getCurrentUserId = () => {
+  try {
+    const user = JSON.parse(sessionStorage.getItem("user"));
+    return user?._id || user?.id || "";
+  } catch {
+    return "";
+  }
+};
+
 const fetchAll = async () => {
-  const users = await API.get("/users?role=student");
-  students.value = users.data;
+  try {
+    const currentUserId = getCurrentUserId();
+    const allCourses = await getCourses();
 
-  const c = await API.get("/courses");
-  courses.value = c.data;
+    courses.value = allCourses.filter(
+      (item) => (item.teacher?._id || item.teacher?.id || item.teacher) === currentUserId
+    );
 
-  const a = await API.get("/attendance");
-  attendance.value = a.data;
+    const uniqueStudents = new Map();
+    courses.value.forEach((courseItem) => {
+      (courseItem.students || []).forEach((studentItem) => {
+        uniqueStudents.set(studentItem._id, studentItem);
+      });
+    });
+
+    students.value = Array.from(uniqueStudents.values());
+    attendance.value = await getAttendanceList();
+  } catch (error) {
+    console.error("Failed to load teacher attendance data:", error);
+  }
 };
 
 const submit = async () => {
-  await markAttendance({
-    student: student.value,
-    course: course.value,
-    status: status.value,
-  });
+  if (courses.value.length === 0) {
+    alert("No course has been assigned to this teacher yet. Ask the admin to assign your courses.");
+    return;
+  }
 
-  fetchAll();
+  try {
+    await markAttendance({
+      student: student.value,
+      course: course.value,
+      status: status.value,
+    });
+
+    await fetchAll();
+  } catch (error) {
+    alert(error.response?.data?.message || "Failed to mark attendance.");
+  }
 };
 
-onMounted(fetchAll);
+onMounted(() => {
+  fetchAll();
+  socket.on("admin:update", fetchAll);
+});
+
+onUnmounted(() => {
+  socket.off("admin:update", fetchAll);
+});
 </script>
 
 <template>
   <section class="card">
     <h2 class="section-title">Attendance</h2>
+
+    <p v-if="courses.length === 0" class="empty">
+      No course has been assigned to this teacher yet.
+    </p>
 
     <div class="form-grid">
       <select v-model="student" class="input">

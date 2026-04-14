@@ -1,6 +1,7 @@
 // backend/controllers/userController.js
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
+import { emitSchoolAdminUpdate } from "../utils/realtime.js";
 
 /* =========================
    REGISTER ADMIN (NEW SCHOOL)
@@ -110,6 +111,13 @@ export const createUser = async (req, res) => {
       school: req.user.school._id,
     });
     res.status(201).json(user);
+
+    await emitSchoolAdminUpdate({
+      schoolId: req.user.school._id,
+      entity: "user",
+      action: "created",
+      message: `${role} account created by admin.`,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -130,6 +138,13 @@ export const getUser = async (req, res) => {
     }
 
     res.json(user);
+
+    await emitSchoolAdminUpdate({
+      schoolId: req.user.school._id,
+      entity: "user",
+      action: "updated",
+      message: "Admin updated a user record.",
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -176,6 +191,13 @@ export const deleteUser = async (req, res) => {
     }
 
     res.json({ message: "User deleted successfully" });
+
+    await emitSchoolAdminUpdate({
+      schoolId: req.user.school._id,
+      entity: "user",
+      action: "deleted",
+      message: "Admin removed a user account.",
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

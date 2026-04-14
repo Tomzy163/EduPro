@@ -5,6 +5,11 @@ export const markAttendance = async (data) => {
   return res.data;
 };
 
+export const getAttendanceList = async () => {
+  const res = await API.get("/attendance");
+  return res.data;
+};
+
 export const getAttendance = async (studentId) => {
   const res = await API.get(`/attendance/student/${studentId}`);
   return res.data;

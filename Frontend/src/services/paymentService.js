@@ -9,3 +9,8 @@ export const getPayments = async () => {
   const res = await API.get("/payments");
   return res.data;
 };
+
+export const getMyPayments = async () => {
+  const res = await API.get("/payments/mine");
+  return res.data;
+};

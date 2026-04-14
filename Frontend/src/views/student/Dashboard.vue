@@ -165,16 +165,24 @@ const handleIncomingMessage = async () => {
   await fetchData();
 };
 
+const handleDataUpdate = async () => {
+  await fetchData();
+};
+
 watch(results, renderTrendChart, { deep: true });
 
 onMounted(async () => {
   await fetchData();
   renderTrendChart();
-  socket.on("message", handleIncomingMessage);
+  socket.on("newMessage", handleIncomingMessage);
+  socket.on("admin:update", handleDataUpdate);
+  socket.on("academic:update", handleDataUpdate);
 });
 
 onUnmounted(() => {
-  socket.off("message", handleIncomingMessage);
+  socket.off("newMessage", handleIncomingMessage);
+  socket.off("admin:update", handleDataUpdate);
+  socket.off("academic:update", handleDataUpdate);
   if (trendChart) {
     trendChart.destroy();
     trendChart = null;

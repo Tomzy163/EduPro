@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { register } from "../services/authService";
 import router from "../router";
-import { connectSocket } from "../services/socket";
+import { connectSocket, disconnectSocket } from "../services/socket";
 import API from "../services/api";
 
 const getStoredUser = () => {
@@ -51,6 +51,7 @@ export const useAuthStore = defineStore("auth", {
       this.token = null;
       sessionStorage.removeItem("user");
       sessionStorage.removeItem("token");
+      disconnectSocket();
       router.push("/");
     },
   },

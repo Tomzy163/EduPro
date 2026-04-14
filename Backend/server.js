@@ -19,7 +19,6 @@ connectDB();
 
 const app = express();
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
@@ -32,17 +31,6 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/timetable", timetableRoutes);
 app.use("/api/relationships", relationshipRoutes);
-// app.get("/test", (req, res) => {
-//   res.send("Test route works");
-// });
-// app.use(cors({
-//   origin: "*", // later restrict to your frontend URL
-// }));
-// app.use(cors({
-//   origin: "https://your-app.netlify.app"
-// }));
-console.log("Relationship routes loaded");
-// 
 
 const server = http.createServer(app);
 
@@ -52,7 +40,8 @@ const io = new Server(server, {
   },
 });
 
-// Store connected users
+app.set("io", io);
+
 let users = [];
 
 io.on("connection", (socket) => {
@@ -61,28 +50,24 @@ io.on("connection", (socket) => {
   socket.on("register", (userId) => {
     if (!userId) return;
 
-    // Remove existing user if already connected
-    users = users.filter((u) => u.userId !== userId);
-
-    // Add new user
+    users = users.filter((user) => user.socketId !== socket.id);
     users.push({ userId, socketId: socket.id });
 
     console.log("Registered users:", users);
   });
 
   socket.on("disconnect", () => {
-    users = users.filter((u) => u.socketId !== socket.id);
+    users = users.filter((user) => user.socketId !== socket.id);
     console.log("User disconnected:", socket.id);
   });
 });
+
 export { io, users };
 
-// Test route
-app.get("/", (req, res) => {
+app.get("/", (_req, res) => {
   res.send("API is running...");
 });
 
-// PORT
 const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, () => {

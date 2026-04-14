@@ -2,6 +2,7 @@ import express from "express";
 import {
   createPayment,
   getPayments,
+  getMyPayments,
   updatePaymentStatus,
 } from "../controllers/paymentController.js";
 import { getUsers } from "../controllers/userController.js";
@@ -20,6 +21,7 @@ router.post(
   upload.single("receipt"),
   createPayment
 );
+router.get("/mine", protect, authorize("parent", "student"), getMyPayments);
 
 // Admin
 router.get("/", protect, authorize("admin"), getPayments);
