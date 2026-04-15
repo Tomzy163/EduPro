@@ -7,13 +7,20 @@ import { createPayment, getMyPayments } from "../../services/paymentService";
 import { getAttendance } from "../../services/attendanceService";
 import Navbar from "@/components/Navbar.vue";
 import Notifications from "@/components/Notifications.vue";
+import SchoolAccountCard from "@/components/SchoolAccountCard.vue";
 import socket from "@/socket";
+import {
+  exportTimetableExcel,
+  exportTimetablePdf,
+  sortTimetableSlots,
+} from "@/utils/timetableExport";
 
 const children = ref([]);
 const selectedChild = ref("");
 const results = ref([]);
 const attendance = ref([]);
 const payments = ref([]);
+const timetable = ref([]);
 const amount = ref("");
 const receipt = ref(null);
 const fileInputKey = ref(0);
@@ -40,6 +47,12 @@ const school = (() => {
 const selectedChildName = computed(() => {
   return children.value.find((child) => child._id === selectedChild.value)?.name || "Selected child";
 });
+
+const selectedChildTimetable = computed(() =>
+  sortTimetableSlots(
+    timetable.value.filter((slot) => slot.student?._id === selectedChild.value)
+  )
+);
 
 const averageScore = computed(() => {
   if (!results.value.length) {
@@ -93,6 +106,11 @@ const fetchPayments = async () => {
   payments.value = await getMyPayments();
 };
 
+const fetchTimetable = async () => {
+  const res = await API.get("/timetable");
+  timetable.value = res.data || [];
+};
+
 const getResults = async () => {
   if (!selectedChild.value) {
     results.value = [];
@@ -108,6 +126,7 @@ const getResults = async () => {
 const refreshDashboard = async () => {
   await fetchChildren();
   await fetchPayments();
+  await fetchTimetable();
 
   if (selectedChild.value) {
     await getResults();
@@ -201,6 +220,34 @@ const downloadChildResult = () => {
   doc.save(`${selectedChildName.value.replace(/\s+/g, "-").toLowerCase()}-result.pdf`);
 };
 
+const downloadSelectedTimetablePdf = () => {
+  if (!selectedChild.value || selectedChildTimetable.value.length === 0) {
+    showStatus("Select a child with timetable records before downloading.", "danger");
+    return;
+  }
+
+  exportTimetablePdf({
+    slots: selectedChildTimetable.value,
+    schoolName: school?.name || user?.school || "EduPro School",
+    title: `${selectedChildName.value} Timetable`,
+    subtitle: `Parent copy generated for ${user.name || "Parent"}`,
+    fileName: `${selectedChildName.value.replace(/\s+/g, "-").toLowerCase()}-timetable.pdf`,
+  });
+};
+
+const downloadAllTimetables = () => {
+  if (!timetable.value.length) {
+    showStatus("No linked student timetable is available yet.", "danger");
+    return;
+  }
+
+  exportTimetableExcel({
+    slots: timetable.value,
+    fileName: `${(user.name || "parent").replace(/\s+/g, "-").toLowerCase()}-children-timetables.xlsx`,
+    sheetName: "Children Timetables",
+  });
+};
+
 onMounted(async () => {
   try {
     await refreshDashboard();
@@ -263,6 +310,12 @@ onUnmounted(() => {
       </article>
     </section>
 
+    <SchoolAccountCard
+      :school="school"
+      title="School Fee Account"
+      subtitle="Use these admin-approved account details when making school-fee payments."
+    />
+
     <section class="card panel">
       <div class="section-head">
         <div>
@@ -314,6 +367,67 @@ onUnmounted(() => {
               <td>{{ result.grade }}</td>
               <td>{{ result.uploadedBy?.name || "Teacher" }}</td>
               <td>{{ new Date(result.createdAt).toLocaleDateString() }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card panel">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Child Timetable</h2>
+          <p class="section-copy">
+            Review the timetable assigned to the child selected above and export one timetable or every linked child timetable.
+          </p>
+        </div>
+
+        <div class="result-toolbar timetable-toolbar">
+          <button
+            @click="downloadSelectedTimetablePdf"
+            class="btn btn-primary"
+            :disabled="!selectedChild || selectedChildTimetable.length === 0"
+          >
+            Download Selected Timetable
+          </button>
+          <button
+            @click="downloadAllTimetables"
+            class="btn btn-success"
+            :disabled="timetable.length === 0"
+          >
+            Download All Timetables
+          </button>
+        </div>
+      </div>
+
+      <div v-if="!selectedChild" class="empty">
+        Select a child above to view the assigned timetable.
+      </div>
+
+      <div v-else-if="selectedChildTimetable.length === 0" class="empty">
+        No timetable has been assigned yet for {{ selectedChildName }}.
+      </div>
+
+      <div v-else class="table-wrapper">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Timetable</th>
+              <th>Course</th>
+              <th>Day</th>
+              <th>Time</th>
+              <th>Location</th>
+              <th>Teacher</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="slot in selectedChildTimetable" :key="slot._id">
+              <td>{{ slot.name || "Timetable" }}</td>
+              <td>{{ slot.course?.name || "Course" }}</td>
+              <td>{{ slot.day }}</td>
+              <td>{{ slot.time }}</td>
+              <td>{{ slot.location || "-" }}</td>
+              <td>{{ slot.teacher?.name || "Teacher" }}</td>
             </tr>
           </tbody>
         </table>
@@ -461,6 +575,10 @@ onUnmounted(() => {
   flex-wrap: wrap;
   gap: 12px;
   align-items: center;
+}
+
+.timetable-toolbar {
+  justify-content: flex-end;
 }
 
 .status-banner {

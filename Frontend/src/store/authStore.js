@@ -89,5 +89,20 @@ export const useAuthStore = defineStore("auth", {
 
       sessionStorage.setItem("user", JSON.stringify(this.user));
     },
+
+    updateSchool(school) {
+      this.school = school || null;
+
+      if (this.user && school?.name) {
+        this.user = {
+          ...this.user,
+          school: school.name,
+          subscription: school.subscription || this.user.subscription,
+        };
+        sessionStorage.setItem("user", JSON.stringify(this.user));
+      }
+
+      sessionStorage.setItem("school", JSON.stringify(this.school));
+    },
   },
 });

@@ -7,6 +7,7 @@ import Navbar from "@/components/Navbar.vue";
 import Notifications from "@/components/Notifications.vue";
 import PerformanceChart from "@/components/PerformanceChart.vue";
 import AttendanceChart from "@/components/AttendanceChart.vue";
+import SchoolAccountCard from "@/components/SchoolAccountCard.vue";
 import UserTimetable from "@/components/UserTimetable.vue";
 import { getStudentResults } from "@/services/resultService";
 import { getAttendance } from "@/services/attendanceService";
@@ -232,6 +233,12 @@ onUnmounted(() => {
         <h3>{{ attendanceCount }}</h3>
       </div>
     </section>
+
+    <SchoolAccountCard
+      :school="school"
+      title="School Fee Account"
+      subtitle="These are the admin-approved school account details available to students."
+    />
 
     <section class="card panel">
       <div class="section-head">

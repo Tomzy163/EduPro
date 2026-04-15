@@ -6,18 +6,22 @@ export const SUBSCRIPTION_PLANS = {
   normal: {
     name: "Normal Plan",
     summary: "Core school operations for smaller schools.",
+    price: 75000,
   },
   supreme: {
     name: "Supreme Plan",
     summary: "Expanded reporting and collaboration tools.",
+    price: 100000,
   },
   gold: {
     name: "Gold Plan",
     summary: "High-capacity access for fast-growing schools.",
+    price: 150000,
   },
   platinum: {
     name: "Platinum Plan",
     summary: "Full premium access for large institutions.",
+    price: 200000,
   },
 };
 
@@ -55,5 +59,11 @@ export const getSubscriptionSnapshot = (school) => {
         id: key,
         ...value,
       })),
+    paymentDetails: {
+      bankName: process.env.SUBSCRIPTION_BANK_NAME || "",
+      accountName: process.env.SUBSCRIPTION_ACCOUNT_NAME || "",
+      accountNumber: process.env.SUBSCRIPTION_ACCOUNT_NUMBER || "",
+      note: process.env.SUBSCRIPTION_PAYMENT_NOTE || "",
+    },
   };
 };

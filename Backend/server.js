@@ -11,6 +11,7 @@ import timetableRoutes from "./routes/timetable.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import relationshipRoutes from "./routes/relationshipRoutes.js";
+import schoolRoutes from "./routes/schoolRoutes.js";
 import { Server } from "socket.io";
 // import { initSocket } from "./socket.js";
 import http from "http";
@@ -37,6 +38,7 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/timetable", timetableRoutes);
 app.use("/api/relationships", relationshipRoutes);
+app.use("/api/school", schoolRoutes);
 
 const server = http.createServer(app);
 
@@ -72,6 +74,23 @@ app.get("/", (_req, res) => {
 // export { io, users };
 
 const PORT = process.env.PORT || 5000;
+
+server.on("error", (error) => {
+  if (error.code === "EADDRINUSE") {
+    console.error(
+      `Port ${PORT} is already in use. Stop the process using port ${PORT} or change PORT in backend/.env, then restart the server.`
+    );
+    process.exit(1);
+  }
+
+  if (error.code === "EACCES") {
+    console.error(`Port ${PORT} requires elevated privileges.`);
+    process.exit(1);
+  }
+
+  console.error("Failed to start server:", error);
+  process.exit(1);
+});
 
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT} with Socket.IO`);

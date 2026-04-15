@@ -1,10 +1,15 @@
 <script setup>
-import { onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import API from "../services/api";
 import socket from "@/socket";
+import {
+  exportTimetableExcel,
+  exportTimetablePdf,
+} from "@/utils/timetableExport";
 
 const timetable = ref([]);
 const user = JSON.parse(sessionStorage.getItem("user"));
+const school = JSON.parse(sessionStorage.getItem("school") || "null");
 
 // Days & time slots
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
@@ -23,6 +28,8 @@ const fetchTimetable = async () => {
   timetable.value = res.data;
 };
 
+const sortedTimetable = computed(() => [...timetable.value]);
+
 const getSlot = (day, time) => {
   return timetable.value.find((slot) => slot.day === day && slot.time === time);
 };
@@ -35,6 +42,34 @@ const getColor = (name) => {
   if (!name) return "";
   const index = name.length % colors.length;
   return colors[index];
+};
+
+const downloadPdf = () => {
+  if (!sortedTimetable.value.length) {
+    alert("No timetable slots are available to download.");
+    return;
+  }
+
+  exportTimetablePdf({
+    slots: sortedTimetable.value,
+    schoolName: school?.name || user?.school || "EduPro School",
+    title: `${user?.role === "teacher" ? "Teacher" : "Student"} Timetable`,
+    subtitle: user?.name ? `Prepared for ${user.name}` : "",
+    fileName: `${(user?.name || "user").replace(/\s+/g, "-").toLowerCase()}-timetable.pdf`,
+  });
+};
+
+const downloadExcel = () => {
+  if (!sortedTimetable.value.length) {
+    alert("No timetable slots are available to download.");
+    return;
+  }
+
+  exportTimetableExcel({
+    slots: sortedTimetable.value,
+    fileName: `${(user?.name || "user").replace(/\s+/g, "-").toLowerCase()}-timetable.xlsx`,
+    sheetName: "Timetable",
+  });
 };
 
 onMounted(fetchTimetable);
@@ -50,7 +85,17 @@ onUnmounted(() => {
 
 <template>
   <section class="card">
-    <h2 class="section-title">My Timetable</h2>
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">My Timetable</h2>
+        <p class="section-copy">Review the latest class schedule and export it when needed.</p>
+      </div>
+
+      <div class="toolbar">
+        <button @click="downloadExcel" class="btn btn-primary">Download Excel</button>
+        <button @click="downloadPdf" class="btn btn-success">Download PDF</button>
+      </div>
+    </div>
 
     <div class="timetable-container">
       <!-- Header -->
@@ -108,6 +153,25 @@ onUnmounted(() => {
   font-weight: 600;
   margin-bottom: 1rem;
   color: #111827;
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.section-copy {
+  margin: 0;
+  color: #64748b;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 /* GRID */
@@ -179,6 +243,10 @@ onUnmounted(() => {
 
 /* RESPONSIVE */
 @media (max-width: 768px) {
+  .section-head {
+    flex-direction: column;
+  }
+
   .timetable-header,
   .timetable-row {
     grid-template-columns: 80px repeat(5, 150px);

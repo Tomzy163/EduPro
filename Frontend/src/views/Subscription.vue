@@ -14,6 +14,13 @@ const activePlan = ref("");
 const error = ref("");
 const success = ref("");
 
+const editablePlanPrices = {
+  normal: 75000,
+  supreme: 100000,
+  gold: 150000,
+  platinum: 200000,
+};
+
 const planDescriptions = {
   normal: [
     "User management",
@@ -52,6 +59,22 @@ const trialMessage = computed(() => {
 
   return "Your free trial has ended. Choose a plan to restore full access.";
 });
+
+const plans = computed(() =>
+  (subscription.value?.availablePlans || []).map((plan) => ({
+    ...plan,
+    price: editablePlanPrices[plan.id] ?? plan.price ?? 0,
+  }))
+);
+
+const paymentDetails = computed(() => subscription.value?.paymentDetails || {});
+
+const formatCurrency = (amount) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(Number(amount || 0));
 
 const loadSubscription = async () => {
   const data = await getSubscriptionStatus();
@@ -110,9 +133,40 @@ onMounted(async () => {
         <p v-if="success" class="banner success">{{ success }}</p>
       </header>
 
+      <section class="card payment-card">
+        <div>
+          <p class="eyebrow">Subscription Payment Details</p>
+          <h2>Plan Pricing And Account Details</h2>
+          <p class="section-copy">
+            The plan prices shown below can be updated directly inside this page, and the bank details come from your backend environment settings.
+          </p>
+        </div>
+
+        <div class="payment-grid">
+          <article class="payment-pill">
+            <span>Bank Name</span>
+            <strong>{{ paymentDetails.bankName || "Set SUBSCRIPTION_BANK_NAME in backend/.env" }}</strong>
+          </article>
+          <article class="payment-pill">
+            <span>Account Name</span>
+            <strong>{{ paymentDetails.accountName || "Set SUBSCRIPTION_ACCOUNT_NAME in backend/.env" }}</strong>
+          </article>
+          <article class="payment-pill">
+            <span>Account Number</span>
+            <strong>{{ paymentDetails.accountNumber || "Set SUBSCRIPTION_ACCOUNT_NUMBER in backend/.env" }}</strong>
+          </article>
+          <article class="payment-pill payment-note">
+            <span>Activation Note</span>
+            <strong>{{
+              paymentDetails.note || "After confirming payment, click the plan below to activate it immediately."
+            }}</strong>
+          </article>
+        </div>
+      </section>
+
       <section class="plans-grid">
         <article
-          v-for="plan in subscription?.availablePlans || []"
+          v-for="plan in plans"
           :key="plan.id"
           class="card plan-card"
         >
@@ -120,6 +174,7 @@ onMounted(async () => {
             <div>
               <h2>{{ plan.name }}</h2>
               <p>{{ plan.summary }}</p>
+              <strong class="price">{{ formatCurrency(plan.price) }}</strong>
             </div>
             <span
               v-if="subscription?.plan === plan.id && subscription?.status === 'active'"
@@ -145,7 +200,7 @@ onMounted(async () => {
                 ? "Activating..."
                 : subscription?.plan === plan.id && subscription?.status === "active"
                   ? "Current Plan"
-                  : `Choose ${plan.name}`
+                  : `Pay And Activate ${plan.name}`
             }}
           </button>
         </article>
@@ -244,6 +299,51 @@ onMounted(async () => {
   gap: 20px;
 }
 
+.payment-card {
+  padding: 24px;
+  display: grid;
+  gap: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(29, 78, 216, 0.12), transparent 30%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.97), rgba(241, 245, 249, 0.95));
+}
+
+.section-copy {
+  margin: 8px 0 0;
+  color: var(--text-soft);
+}
+
+.payment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.payment-pill {
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.payment-pill span {
+  display: block;
+  margin-bottom: 8px;
+  color: #64748b;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+
+.payment-pill strong {
+  color: #0f172a;
+}
+
+.payment-note {
+  grid-column: 1 / -1;
+}
+
 .plan-card {
   padding: 24px;
   display: grid;
@@ -264,6 +364,13 @@ onMounted(async () => {
 .plan-head p {
   margin: 8px 0 0;
   color: var(--text-soft);
+}
+
+.price {
+  display: inline-block;
+  margin-top: 14px;
+  font-size: 1.5rem;
+  color: #0f172a;
 }
 
 .active-tag {

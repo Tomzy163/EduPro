@@ -1,11 +1,14 @@
 <script setup>
 import Navbar from "@/components/Navbar.vue";
 import Notifications from "@/components/Notifications.vue";
+import SchoolAccountCard from "@/components/SchoolAccountCard.vue";
 import TeacherAnalytics from "@/components/teacher/TeacherAnalytics.vue";
 import TeacherResults from "@/components/teacher/TeacherResults.vue";
 import TeacherAttendance from "@/components/teacher/TeacherAttendance.vue";
 import TeacherCourseSelector from "@/components/teacher/TeacherCourseSelector.vue";
 import UserTimetable from "@/components/UserTimetable.vue";
+
+const school = JSON.parse(sessionStorage.getItem("school") || "null");
 </script>
 
 <template>
@@ -23,6 +26,12 @@ import UserTimetable from "@/components/UserTimetable.vue";
 
     <Notifications />
     <TeacherAnalytics />
+
+    <SchoolAccountCard
+      :school="school"
+      title="School Account Number"
+      subtitle="Teachers can quickly confirm the official account details configured by the admin."
+    />
 
     <section class="card panel">
       <h2 class="section-title">Class Timetable</h2>

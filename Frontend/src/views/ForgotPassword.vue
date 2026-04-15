@@ -30,6 +30,7 @@ const submit = async () => {
     resetLink.value = data.resetLink || "";
     email.value = "";
   } catch (err) {
+    resetLink.value = err.response?.data?.resetLink || "";
     error.value = err.response?.data?.message || "Unable to send reset instructions.";
   } finally {
     loading.value = false;
@@ -69,6 +70,9 @@ const submit = async () => {
 
       <div v-if="resetLink" class="preview">
         <strong>Reset Link</strong>
+        <p class="preview-copy">
+          Use this link locally if email delivery is not configured yet.
+        </p>
         <a :href="resetLink">{{ resetLink }}</a>
       </div>
 
@@ -165,6 +169,11 @@ h1 {
   background: rgba(37, 99, 235, 0.08);
   display: grid;
   gap: 6px;
+}
+
+.preview-copy {
+  margin: 0;
+  color: #475569;
 }
 
 .preview a {

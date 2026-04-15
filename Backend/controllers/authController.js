@@ -3,8 +3,8 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import School from "../models/School.js";
-import nodemailer from "nodemailer";
 import { getSubscriptionSnapshot } from "../utils/subscription.js";
+import { sendPasswordResetEmail } from "../utils/mailer.js";
 
 const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -20,8 +20,19 @@ const generateToken = (user) => {
   );
 };
 
+const buildSchoolPayload = (school) => ({
+  _id: school._id,
+  name: school.name,
+  bankName: school.bankName || "",
+  accountName: school.accountName || "",
+  accountNumber: school.accountNumber || "",
+  paymentInstructions: school.paymentInstructions || "",
+  subscription: getSubscriptionSnapshot(school),
+});
+
 const buildAuthResponse = (user, school) => {
   const subscription = getSubscriptionSnapshot(school);
+  const schoolPayload = buildSchoolPayload(school);
 
   return {
     user: {
@@ -34,11 +45,7 @@ const buildAuthResponse = (user, school) => {
       schoolId: school._id,
       subscription,
     },
-    school: {
-      _id: school._id,
-      name: school.name,
-      subscription,
-    },
+    school: schoolPayload,
     subscription,
     token: generateToken(user),
   };
@@ -198,30 +205,28 @@ export const forgotPassword = async (req, res) => {
     const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
     const resetLink = `${clientUrl}/reset-password?token=${encodeURIComponent(token)}`;
 
-    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
+    try {
+      const emailResult = await sendPasswordResetEmail({
+        to: user.email,
+        name: user.name,
+        resetLink,
       });
 
-      const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: user.email,
-        subject: "Password Reset Link",
-        text: `Hello ${user.name},\n\nClick this link to reset your password:\n${resetLink}\nThis link expires in 15 minutes.`,
-      };
-
-      await transporter.sendMail(mailOptions);
-
-      return res.json({ message: "Reset link sent to your email" });
+      if (emailResult.sent) {
+        return res.json({
+          message: "Reset link sent to your email.",
+          emailSent: true,
+        });
+      }
+    } catch (mailError) {
+      console.error("FORGOT PASSWORD MAIL ERROR:", mailError);
     }
 
     res.json({
-      message: "Reset link generated successfully.",
+      message:
+        "Reset link generated successfully. Email delivery is not configured or failed on this device, so use the link below while testing locally.",
       resetLink,
+      emailSent: false,
     });
   } catch (error) {
     console.error(error);
@@ -278,10 +283,7 @@ export const getSubscriptionStatus = async (req, res) => {
     }
 
     res.json({
-      school: {
-        _id: school._id,
-        name: school.name,
-      },
+      school: buildSchoolPayload(school),
       subscription,
     });
   } catch (error) {
@@ -314,10 +316,7 @@ export const subscribeSchool = async (req, res) => {
 
     res.json({
       message: `${plan[0].toUpperCase()}${plan.slice(1)} plan activated successfully.`,
-      school: {
-        _id: school._id,
-        name: school.name,
-      },
+      school: buildSchoolPayload(school),
       subscription,
     });
   } catch (error) {

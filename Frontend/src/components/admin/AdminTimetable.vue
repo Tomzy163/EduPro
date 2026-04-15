@@ -3,6 +3,10 @@ import { computed, onMounted, ref } from "vue";
 import API from "@/services/api";
 import { getCourses } from "@/services/courseService";
 import { getUsers } from "@/services/userService";
+import {
+  exportTimetableExcel,
+  exportTimetablePdf,
+} from "@/utils/timetableExport";
 
 const timetable = ref([]);
 const users = ref([]);
@@ -27,6 +31,8 @@ const times = [
   "01:00pm-02:00pm",
   "02:00pm-03:00pm",
 ];
+
+const school = JSON.parse(sessionStorage.getItem("school") || "null");
 
 const filteredAssignees = computed(() =>
   users.value.filter((user) => user.role === audience.value)
@@ -83,15 +89,52 @@ const removeSlot = async (id) => {
   await fetchData();
 };
 
+const downloadTimetablePdf = () => {
+  if (!timetable.value.length) {
+    alert("Create timetable slots before downloading.");
+    return;
+  }
+
+  exportTimetablePdf({
+    slots: timetable.value,
+    schoolName: school?.name || "EduPro School",
+    title: "School Timetable",
+    subtitle: "Full export for admin review",
+    fileName: "school-timetable.pdf",
+  });
+};
+
+const downloadTimetableExcel = () => {
+  if (!timetable.value.length) {
+    alert("Create timetable slots before downloading.");
+    return;
+  }
+
+  exportTimetableExcel({
+    slots: timetable.value,
+    fileName: "school-timetable.xlsx",
+    sheetName: "School Timetable",
+  });
+};
+
 onMounted(fetchData);
 </script>
 
 <template>
   <section class="card admin-timetable">
-    <h2 class="section-title">Timetable Builder</h2>
-    <p class="section-copy">
-      Create multiple timetable slots, group them under one timetable name, and assign them to a student or teacher.
-    </p>
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">Timetable Builder</h2>
+        <p class="section-copy">
+          Create multiple timetable slots, group them under one timetable name, and assign them to a student or teacher.
+        </p>
+      </div>
+
+      <div class="toolbar">
+        <button @click="downloadTimetableExcel" class="btn btn-primary">Export Excel</button>
+        <button @click="downloadTimetablePdf" class="btn btn-success">Export PDF</button>
+      </div>
+    </div>
 
     <div class="form-grid">
       <input v-model="name" class="input" placeholder="Timetable name" />
@@ -194,6 +237,19 @@ onMounted(fetchData);
   color: var(--text-soft);
 }
 
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .draft-section {
   margin: 24px 0;
 }
@@ -213,5 +269,11 @@ onMounted(fetchData);
   border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 14px;
   background: #fff;
+}
+
+@media (max-width: 768px) {
+  .section-head {
+    flex-direction: column;
+  }
 }
 </style>

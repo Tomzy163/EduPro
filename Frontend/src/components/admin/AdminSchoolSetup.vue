@@ -1,15 +1,25 @@
 <script setup>
 import { computed, onMounted, ref } from "vue";
+import { useAuthStore } from "@/store/authStore";
 import {
   assignStudent,
   assignTeacher,
   createCourse,
   getCourses,
 } from "@/services/courseService";
+import { getMySchool, updateMySchool } from "@/services/schoolService";
 import { getUsers } from "@/services/userService";
 
+const auth = useAuthStore();
 const courses = ref([]);
 const users = ref([]);
+const schoolProfile = ref({
+  name: "",
+  bankName: "",
+  accountName: "",
+  accountNumber: "",
+  paymentInstructions: "",
+});
 
 const courseName = ref("");
 const courseTerm = ref("First Term");
@@ -17,6 +27,7 @@ const selectedCourseId = ref("");
 const selectedTeacherId = ref("");
 const selectedStudentIds = ref([]);
 const loading = ref(false);
+const profileLoading = ref(false);
 const statusMessage = ref("");
 const statusTone = ref("primary");
 
@@ -33,7 +44,58 @@ const selectedCourse = computed(() =>
 );
 
 const fetchData = async () => {
-  [courses.value, users.value] = await Promise.all([getCourses(), getUsers()]);
+  const [courseData, userData, schoolData] = await Promise.all([
+    getCourses(),
+    getUsers(),
+    getMySchool(),
+  ]);
+
+  courses.value = courseData;
+  users.value = userData;
+  schoolProfile.value = {
+    name: schoolData.school?.name || "",
+    bankName: schoolData.school?.bankName || "",
+    accountName: schoolData.school?.accountName || "",
+    accountNumber: schoolData.school?.accountNumber || "",
+    paymentInstructions: schoolData.school?.paymentInstructions || "",
+  };
+};
+
+const handleSaveSchoolProfile = async () => {
+  if (!schoolProfile.value.name.trim()) {
+    alert("Enter a school name.");
+    return;
+  }
+
+  profileLoading.value = true;
+  statusMessage.value = "";
+
+  try {
+    const response = await updateMySchool({
+      name: schoolProfile.value.name,
+      bankName: schoolProfile.value.bankName,
+      accountName: schoolProfile.value.accountName,
+      accountNumber: schoolProfile.value.accountNumber,
+      paymentInstructions: schoolProfile.value.paymentInstructions,
+    });
+
+    schoolProfile.value = {
+      name: response.school?.name || "",
+      bankName: response.school?.bankName || "",
+      accountName: response.school?.accountName || "",
+      accountNumber: response.school?.accountNumber || "",
+      paymentInstructions: response.school?.paymentInstructions || "",
+    };
+    auth.updateSchool(response.school);
+    statusTone.value = "success";
+    statusMessage.value = response.message || "School profile updated successfully.";
+  } catch (error) {
+    statusTone.value = "danger";
+    statusMessage.value =
+      error.response?.data?.message || "Failed to update school profile.";
+  } finally {
+    profileLoading.value = false;
+  }
 };
 
 const handleCreateCourse = async () => {
@@ -129,6 +191,28 @@ onMounted(fetchData);
   <section class="card admin-school-setup">
     <div v-if="statusMessage" class="status-banner" :class="`status-${statusTone}`">
       {{ statusMessage }}
+    </div>
+
+    <div class="section-block identity-block">
+      <h2 class="section-title">School Identity And Payment Account</h2>
+      <p class="section-copy">
+        Update the school name and the account details that students, parents, teachers, and admins can view for school-fee payments.
+      </p>
+
+      <div class="form-grid">
+        <input v-model="schoolProfile.name" class="input" placeholder="School name" />
+        <input v-model="schoolProfile.bankName" class="input" placeholder="Bank name" />
+        <input v-model="schoolProfile.accountName" class="input" placeholder="Account name" />
+        <input v-model="schoolProfile.accountNumber" class="input" placeholder="Account number" />
+        <textarea
+          v-model="schoolProfile.paymentInstructions"
+          class="input textarea"
+          placeholder="Payment instructions or notes"
+        />
+        <button @click="handleSaveSchoolProfile" class="btn btn-success" :disabled="profileLoading">
+          {{ profileLoading ? "Saving..." : "Save School Details" }}
+        </button>
+      </div>
     </div>
 
     <div class="section-block">
@@ -241,6 +325,15 @@ onMounted(fetchData);
   padding: 24px;
 }
 
+.identity-block {
+  padding: 20px;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at top right, rgba(14, 116, 144, 0.12), transparent 34%),
+    linear-gradient(160deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.98));
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
 .status-banner {
   margin-bottom: 20px;
   padding: 12px 16px;
@@ -287,5 +380,10 @@ onMounted(fetchData);
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 14px;
   background: #fff;
+}
+
+.textarea {
+  min-height: 110px;
+  resize: vertical;
 }
 </style>

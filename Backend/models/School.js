@@ -34,6 +34,26 @@ const schoolSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    bankName: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    accountName: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    accountNumber: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    paymentInstructions: {
+      type: String,
+      default: "",
+      trim: true,
+    },
   },
   { timestamps: true }
 );
