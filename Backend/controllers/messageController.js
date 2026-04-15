@@ -1,7 +1,7 @@
 // backend/controllers/messageController.js
 import Message from "../models/Message.js";
 import User from "../models/User.js";
-import { io, users } from "../server.js";
+import { io, users } from "../utils/socketState.js";
 
 // SEND MESSAGE (Admin)
 export const sendMessage = async (req, res) => {

@@ -30,4 +30,8 @@ const resultSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+resultSchema.index({ school: 1, course: 1, createdAt: -1 });
+resultSchema.index({ school: 1, student: 1, createdAt: -1 });
+resultSchema.index({ school: 1, student: 1, course: 1 });
+
 export default mongoose.model("Result", resultSchema);

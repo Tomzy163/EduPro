@@ -1,5 +1,6 @@
 import Attendance from "../models/Attendance.js";
 import Course from "../models/Course.js";
+import ParentStudentLink from "../models/ParentStudentLink.js";
 import { emitAcademicUpdate } from "../utils/realtime.js";
 
 export const markAttendance = async (req, res) => {
@@ -66,10 +67,34 @@ export const getAttendanceList = async (req, res) => {
 
 export const getAttendance = async (req, res) => {
   try {
+    const studentId = req.params.id;
+    const schoolId = req.user.school._id;
+
+    if (
+      req.user.role === "student" &&
+      String(req.user._id) !== String(studentId)
+    ) {
+      return res.status(403).json({ message: "Not allowed" });
+    }
+
+    if (req.user.role === "parent") {
+      const linkedRecord = await ParentStudentLink.findOne({
+        parent: req.user._id,
+        student: studentId,
+        school: schoolId,
+      });
+
+      if (!linkedRecord) {
+        return res.status(403).json({ message: "Student is not linked to this parent." });
+      }
+    }
+
     const records = await Attendance.find({
-      student: req.params.id,
-      school: req.user.school._id,
-    }).populate("course", "name");
+      student: studentId,
+      school: schoolId,
+    })
+      .populate("course", "name")
+      .sort({ date: -1, createdAt: -1 });
 
     res.json(records);
   } catch (error) {

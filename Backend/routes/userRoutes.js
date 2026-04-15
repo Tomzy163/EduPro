@@ -15,11 +15,13 @@ import {
 
 import { protect } from "../middleware/authMiddleware.js";
 import { authorize } from "../middleware/roleMiddleware.js";
+import { requireSchoolAccess } from "../middleware/subscriptionMiddleware.js";
 
 const router = express.Router();
 
 // All routes protected
 router.use(protect);
+router.use(requireSchoolAccess);
 
 // ADMIN ONLY ROUTES
 router.get("/", authorize("admin"), getUsers);

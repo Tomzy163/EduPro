@@ -10,29 +10,22 @@ import { getUsers } from "../controllers/userController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorize } from "../middleware/roleMiddleware.js";
 import upload from "../middleware/uploadMiddleware.js";
+import { requireSchoolAccess } from "../middleware/subscriptionMiddleware.js";
 
 const router = express.Router();
 
-// Parent / Student upload payment
+router.use(protect, requireSchoolAccess);
+
 router.post(
   "/",
-  protect,
   authorize("parent", "student"),
   upload.single("receipt"),
   createPayment
 );
-router.get("/mine", protect, authorize("parent", "student"), getMyPayments);
-
-// Admin
-router.get("/", protect, authorize("admin"), getPayments);
-
-router.put(
-  "/:id",
-  protect,
-  authorize("admin"),
-  updatePaymentStatus
-);
-router.get("/users", protect, getUsers);
-router.get("/payments", protect, getPayments);
+router.get("/mine", authorize("parent", "student"), getMyPayments);
+router.get("/", authorize("admin"), getPayments);
+router.put("/:id", authorize("admin"), updatePaymentStatus);
+router.get("/users", authorize("admin"), getUsers);
+router.get("/payments", authorize("admin"), getPayments);
 
 export default router;

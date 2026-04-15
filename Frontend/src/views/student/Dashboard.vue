@@ -74,6 +74,16 @@ const rankings = computed(() =>
 
 const attendanceCount = computed(() => attendance.value.length);
 
+const strongestSubject = computed(() => {
+  if (!results.value.length) return null;
+  return [...results.value].sort((a, b) => Number(b.score || 0) - Number(a.score || 0))[0];
+});
+
+const supportSubject = computed(() => {
+  if (!results.value.length) return null;
+  return [...results.value].sort((a, b) => Number(a.score || 0) - Number(b.score || 0))[0];
+});
+
 const remark = computed(() => {
   if (averageScore.value >= 80) return "Excellent performance";
   if (averageScore.value >= 60) return "Good performance";
@@ -238,6 +248,28 @@ onUnmounted(() => {
 
     <section class="grid-2">
       <div class="card panel">
+        <h2 class="section-title">Academic Standing</h2>
+        <div class="insight-grid">
+          <article class="insight-card">
+            <span>Strongest Subject</span>
+            <strong>{{ strongestSubject?.course?.name || "No data yet" }}</strong>
+            <p>
+              Score:
+              {{ strongestSubject?.score ?? "-" }}
+            </p>
+          </article>
+          <article class="insight-card caution">
+            <span>Needs Attention</span>
+            <strong>{{ supportSubject?.course?.name || "No data yet" }}</strong>
+            <p>
+              Score:
+              {{ supportSubject?.score ?? "-" }}
+            </p>
+          </article>
+        </div>
+      </div>
+
+      <div class="card panel">
         <h2 class="section-title">Top Performance</h2>
         <ul class="ranking">
           <li v-for="(result, index) in rankings" :key="result._id">
@@ -353,6 +385,36 @@ onUnmounted(() => {
   background: rgba(15, 118, 110, 0.1);
   color: #0f766e;
   font-weight: 700;
+}
+
+.insight-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.insight-card {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(15, 118, 110, 0.08);
+}
+
+.insight-card span {
+  display: block;
+  color: var(--text-soft);
+  margin-bottom: 8px;
+}
+
+.insight-card strong {
+  display: block;
+  font-size: 1.1rem;
+}
+
+.insight-card p {
+  margin: 8px 0 0;
+}
+
+.insight-card.caution {
+  background: rgba(245, 158, 11, 0.12);
 }
 
 .ranking {

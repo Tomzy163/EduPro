@@ -1,5 +1,8 @@
 <script setup>
-import { onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import {
   getAttendanceList,
   markAttendance,
@@ -14,6 +17,15 @@ const attendance = ref([]);
 const student = ref("");
 const course = ref("");
 const status = ref("present");
+
+const attendanceRows = computed(() =>
+  attendance.value.map((record) => ({
+    student: record.student?.name || "Student",
+    course: record.course?.name || "Course",
+    status: record.status || "-",
+    date: new Date(record.date || record.createdAt).toLocaleDateString(),
+  }))
+);
 
 const getCurrentUserId = () => {
   try {
@@ -66,6 +78,42 @@ const submit = async () => {
   }
 };
 
+const downloadAttendanceExcel = () => {
+  if (attendanceRows.value.length === 0) {
+    alert("No attendance records are available to download.");
+    return;
+  }
+
+  const worksheet = XLSX.utils.json_to_sheet(attendanceRows.value);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
+  XLSX.writeFile(workbook, "teacher-attendance.xlsx");
+};
+
+const downloadAttendancePdf = () => {
+  if (attendanceRows.value.length === 0) {
+    alert("No attendance records are available to download.");
+    return;
+  }
+
+  const doc = new jsPDF();
+  doc.setFontSize(16);
+  doc.text("Attendance Report", 14, 18);
+
+  autoTable(doc, {
+    startY: 28,
+    head: [["Student", "Course", "Status", "Date"]],
+    body: attendanceRows.value.map((row) => [
+      row.student,
+      row.course,
+      row.status,
+      row.date,
+    ]),
+  });
+
+  doc.save("teacher-attendance.pdf");
+};
+
 onMounted(() => {
   fetchAll();
   socket.on("admin:update", fetchAll);
@@ -78,7 +126,16 @@ onUnmounted(() => {
 
 <template>
   <section class="card">
-    <h2 class="section-title">Attendance</h2>
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">Attendance</h2>
+        <p class="section-copy">Mark attendance and download the latest class attendance history.</p>
+      </div>
+      <div class="action-row">
+        <button @click="downloadAttendanceExcel" class="btn btn-primary">Download Excel</button>
+        <button @click="downloadAttendancePdf" class="btn btn-success">Download PDF</button>
+      </div>
+    </div>
 
     <p v-if="courses.length === 0" class="empty">
       No course has been assigned to this teacher yet.
@@ -128,3 +185,30 @@ onUnmounted(() => {
     </div>
   </section>
 </template>
+
+<style scoped>
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.section-copy {
+  margin: 6px 0 0;
+  color: var(--text-soft);
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@media (max-width: 768px) {
+  .section-head {
+    flex-direction: column;
+  }
+}
+</style>

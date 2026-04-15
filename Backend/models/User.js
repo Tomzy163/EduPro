@@ -53,5 +53,7 @@ const userSchema = new mongoose.Schema(
 );
 
 userSchema.index({ email: 1, school: 1 }, { unique: true });
+userSchema.index({ school: 1, role: 1, createdAt: -1 });
+userSchema.index({ school: 1, name: 1 });
 
 export default mongoose.model("User", userSchema);

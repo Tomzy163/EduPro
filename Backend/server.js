@@ -12,7 +12,13 @@ import paymentRoutes from "./routes/paymentRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import relationshipRoutes from "./routes/relationshipRoutes.js";
 import { Server } from "socket.io";
+// import { initSocket } from "./socket.js";
 import http from "http";
+import {
+  registerSocketUser,
+  setIo,
+  unregisterSocketUser,
+} from "./utils/socketState.js";
 
 dotenv.config();
 connectDB();
@@ -41,8 +47,7 @@ const io = new Server(server, {
 });
 
 app.set("io", io);
-
-let users = [];
+setIo(io);
 
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
@@ -50,23 +55,21 @@ io.on("connection", (socket) => {
   socket.on("register", (userId) => {
     if (!userId) return;
 
-    users = users.filter((user) => user.socketId !== socket.id);
-    users.push({ userId, socketId: socket.id });
-
-    console.log("Registered users:", users);
+    registerSocketUser({ userId, socketId: socket.id });
   });
 
   socket.on("disconnect", () => {
-    users = users.filter((user) => user.socketId !== socket.id);
+    unregisterSocketUser(socket.id);
     console.log("User disconnected:", socket.id);
   });
 });
 
-export { io, users };
-
 app.get("/", (_req, res) => {
   res.send("API is running...");
 });
+// initSocket(server);
+
+// export { io, users };
 
 const PORT = process.env.PORT || 5000;
 

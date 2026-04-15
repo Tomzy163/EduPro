@@ -2,9 +2,12 @@ import express from "express";
 import Timetable from "../models/Timetable.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorize } from "../middleware/roleMiddleware.js";
+import { requireSchoolAccess } from "../middleware/subscriptionMiddleware.js";
 import { emitSchoolAdminUpdate } from "../utils/realtime.js";
 
 const router = express.Router();
+
+router.use(protect, requireSchoolAccess);
 
 const buildTimetablePayload = (body, schoolId) => {
   const payload = {
@@ -30,7 +33,7 @@ const buildTimetablePayload = (body, schoolId) => {
   return payload;
 };
 
-router.get("/", protect, async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const query = { school: req.user.school._id };
 
@@ -57,7 +60,7 @@ router.get("/", protect, async (req, res) => {
   }
 });
 
-router.post("/", protect, authorize("admin"), async (req, res) => {
+router.post("/", authorize("admin"), async (req, res) => {
   try {
     const slot = await Timetable.create(
       buildTimetablePayload(req.body, req.user.school._id)
@@ -76,7 +79,7 @@ router.post("/", protect, authorize("admin"), async (req, res) => {
   }
 });
 
-router.post("/bulk", protect, authorize("admin"), async (req, res) => {
+router.post("/bulk", authorize("admin"), async (req, res) => {
   try {
     const slots = Array.isArray(req.body) ? req.body : req.body.slots;
 
@@ -102,7 +105,7 @@ router.post("/bulk", protect, authorize("admin"), async (req, res) => {
   }
 });
 
-router.put("/:id", protect, authorize("admin"), async (req, res) => {
+router.put("/:id", authorize("admin"), async (req, res) => {
   try {
     const updatedSlot = await Timetable.findOneAndUpdate(
       { _id: req.params.id, school: req.user.school._id },
@@ -130,7 +133,7 @@ router.put("/:id", protect, authorize("admin"), async (req, res) => {
   }
 });
 
-router.delete("/:id", protect, authorize("admin"), async (req, res) => {
+router.delete("/:id", authorize("admin"), async (req, res) => {
   try {
     const deletedSlot = await Timetable.findOneAndDelete({
       _id: req.params.id,

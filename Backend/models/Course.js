@@ -29,4 +29,7 @@ const courseSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+courseSchema.index({ school: 1, teacher: 1 });
+courseSchema.index({ school: 1, term: 1, name: 1 });
+
 export default mongoose.model("Course", courseSchema);

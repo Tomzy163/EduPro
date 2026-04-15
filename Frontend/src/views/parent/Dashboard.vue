@@ -1,7 +1,10 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from "vue";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import API from "../../services/api";
 import { createPayment, getMyPayments } from "../../services/paymentService";
+import { getAttendance } from "../../services/attendanceService";
 import Navbar from "@/components/Navbar.vue";
 import Notifications from "@/components/Notifications.vue";
 import socket from "@/socket";
@@ -9,6 +12,7 @@ import socket from "@/socket";
 const children = ref([]);
 const selectedChild = ref("");
 const results = ref([]);
+const attendance = ref([]);
 const payments = ref([]);
 const amount = ref("");
 const receipt = ref(null);
@@ -25,12 +29,44 @@ const user = (() => {
   }
 })();
 
+const school = (() => {
+  try {
+    return JSON.parse(sessionStorage.getItem("school"));
+  } catch {
+    return null;
+  }
+})();
+
 const selectedChildName = computed(() => {
   return children.value.find((child) => child._id === selectedChild.value)?.name || "Selected child";
 });
 
+const averageScore = computed(() => {
+  if (!results.value.length) {
+    return 0;
+  }
+
+  const total = results.value.reduce(
+    (sum, result) => sum + Number(result.score || 0),
+    0
+  );
+
+  return Math.round(total / results.value.length);
+});
+
+const resultRemark = computed(() => {
+  if (averageScore.value >= 80) return "Excellent performance";
+  if (averageScore.value >= 60) return "Good performance";
+  if (averageScore.value >= 50) return "Fair performance";
+  return "Needs improvement";
+});
+
 const approvedPayments = computed(() =>
   payments.value.filter((payment) => payment.status === "approved").length
+);
+
+const presentAttendanceCount = computed(
+  () => attendance.value.filter((record) => record.status === "present").length
 );
 
 const showStatus = (message, tone = "primary") => {
@@ -60,11 +96,13 @@ const fetchPayments = async () => {
 const getResults = async () => {
   if (!selectedChild.value) {
     results.value = [];
+    attendance.value = [];
     return;
   }
 
   const res = await API.get(`/results/student/${selectedChild.value}`);
   results.value = res.data;
+  attendance.value = await getAttendance(selectedChild.value);
 };
 
 const refreshDashboard = async () => {
@@ -126,6 +164,43 @@ const handleAcademicUpdate = async () => {
   }
 };
 
+const downloadChildResult = () => {
+  if (!selectedChild.value || results.value.length === 0) {
+    showStatus("Select a child with available results before downloading.", "danger");
+    return;
+  }
+
+  const doc = new jsPDF();
+  const schoolName =
+    school?.name || user?.school?.name || user?.school || "EduPro International School";
+
+  doc.setFontSize(20);
+  doc.text(schoolName, 14, 18);
+  doc.setFontSize(14);
+  doc.text("Parent Result Copy", 14, 28);
+  doc.setFontSize(11);
+  doc.text(`Parent: ${user.name || "Parent"}`, 14, 38);
+  doc.text(`Student: ${selectedChildName.value}`, 14, 45);
+  doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 52);
+
+  autoTable(doc, {
+    startY: 60,
+    head: [["Course", "Score", "Grade", "Teacher", "Date"]],
+    body: results.value.map((result) => [
+      result.course?.name || "Untitled Course",
+      result.score ?? "-",
+      result.grade ?? "-",
+      result.uploadedBy?.name || "Teacher",
+      new Date(result.createdAt).toLocaleDateString(),
+    ]),
+  });
+
+  const finalY = doc.lastAutoTable?.finalY || 80;
+  doc.text(`Average Score: ${averageScore.value}`, 14, finalY + 12);
+  doc.text(`Remark: ${resultRemark.value}`, 14, finalY + 20);
+  doc.save(`${selectedChildName.value.replace(/\s+/g, "-").toLowerCase()}-result.pdf`);
+};
+
 onMounted(async () => {
   try {
     await refreshDashboard();
@@ -178,6 +253,14 @@ onUnmounted(() => {
         <p>Approved Payments</p>
         <h3>{{ approvedPayments }}</h3>
       </article>
+      <article class="stat-card accent-teal">
+        <p>Attendance Records</p>
+        <h3>{{ attendance.length }}</h3>
+      </article>
+      <article class="stat-card accent-slate">
+        <p>Present Days</p>
+        <h3>{{ presentAttendanceCount }}</h3>
+      </article>
     </section>
 
     <section class="card panel">
@@ -188,12 +271,21 @@ onUnmounted(() => {
             Switch between linked children and view the full academic record uploaded so far.
           </p>
         </div>
-        <select v-model="selectedChild" @change="getResults" class="input child-select">
-          <option disabled value="">Select Child</option>
-          <option v-for="child in children" :key="child._id" :value="child._id">
-            {{ child.name }}
-          </option>
-        </select>
+        <div class="result-toolbar">
+          <select v-model="selectedChild" @change="getResults" class="input child-select">
+            <option disabled value="">Select Child</option>
+            <option v-for="child in children" :key="child._id" :value="child._id">
+              {{ child.name }}
+            </option>
+          </select>
+          <button
+            @click="downloadChildResult"
+            class="btn btn-success"
+            :disabled="!selectedChild || results.length === 0"
+          >
+            Download Result
+          </button>
+        </div>
       </div>
 
       <div v-if="!selectedChild" class="empty">
@@ -229,6 +321,48 @@ onUnmounted(() => {
     </section>
 
     <section class="grid-2 parent-grid">
+      <section class="card panel">
+        <div class="section-head compact">
+          <div>
+            <h2 class="section-title">Attendance History</h2>
+            <p class="section-copy">
+              Review the selected child&apos;s daily attendance records and class presence.
+            </p>
+          </div>
+        </div>
+
+        <div v-if="!selectedChild" class="empty">
+          Select a child to review attendance.
+        </div>
+
+        <div v-else-if="attendance.length === 0" class="empty">
+          No attendance records have been added yet for {{ selectedChildName }}.
+        </div>
+
+        <div v-else class="table-wrapper">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Course</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="record in attendance" :key="record._id">
+                <td>{{ record.course?.name || "Course" }}</td>
+                <td>
+                  <span class="badge" :class="record.status || 'pending'">
+                    {{ record.status || "-" }}
+                  </span>
+                </td>
+                <td>{{ new Date(record.date || record.createdAt).toLocaleDateString() }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <section class="card panel">
         <div class="section-head compact">
           <div>
@@ -322,6 +456,13 @@ onUnmounted(() => {
   min-width: 220px;
 }
 
+.result-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
 .status-banner {
   padding: 12px 16px;
   border-radius: 14px;
@@ -364,7 +505,8 @@ onUnmounted(() => {
 
 @media (max-width: 768px) {
   .dashboard-header,
-  .section-head {
+  .section-head,
+  .result-toolbar {
     flex-direction: column;
   }
 

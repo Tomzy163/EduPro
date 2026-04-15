@@ -8,14 +8,15 @@ import {
 
 import { protect } from "../middleware/authMiddleware.js";
 import { authorize } from "../middleware/roleMiddleware.js";
+import { requireSchoolAccess } from "../middleware/subscriptionMiddleware.js";
 
 const router = express.Router();
 
-// ADMIN
-router.post("/", protect, authorize("admin"), createCourse);
-router.get("/", protect, getCourses);
+router.use(protect, requireSchoolAccess);
 
-router.post("/assign-student", protect, authorize("admin"), assignStudent);
-router.post("/assign-teacher", protect, authorize("admin"), assignTeacher);
+router.post("/", authorize("admin"), createCourse);
+router.get("/", getCourses);
+router.post("/assign-student", authorize("admin"), assignStudent);
+router.post("/assign-teacher", authorize("admin"), assignTeacher);
 
 export default router;

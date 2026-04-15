@@ -187,7 +187,7 @@ onMounted(refreshAll);
         <select v-model="parentId" class="input">
           <option disabled value="">Select Parent</option>
           <option v-for="parent in parents" :key="parent._id" :value="parent._id">
-            {{ parent.name }} · {{ linkedCounts[parent._id] || 0 }} linked
+            {{ parent.name }} - {{ linkedCounts[parent._id] || 0 }} linked
           </option>
         </select>
       </div>

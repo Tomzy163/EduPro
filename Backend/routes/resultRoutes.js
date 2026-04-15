@@ -6,25 +6,18 @@ import {
   getTeacherResults,
   getStudentResults,
 } from "../controllers/resultController.js";
-
 import { protect } from "../middleware/authMiddleware.js";
 import { authorize } from "../middleware/roleMiddleware.js";
+import { requireSchoolAccess } from "../middleware/subscriptionMiddleware.js";
 
 const router = express.Router();
 
-// ✅ CREATE
-router.post("/", protect, authorize("teacher", "admin"), uploadResult);
+router.use(protect, requireSchoolAccess);
 
-// ✅ UPDATE
-router.put("/:id", protect, authorize("teacher", "admin"), updateResult);
-
-// ✅ DELETE
-router.delete("/:id", protect, authorize("teacher", "admin"), deleteResult);
-
-// ✅ TEACHER VIEW
-router.get("/teacher", protect, authorize("teacher", "admin"), getTeacherResults);
-
-// ✅ STUDENT VIEW
-router.get("/student/:id", protect, getStudentResults);
+router.post("/", authorize("teacher", "admin"), uploadResult);
+router.put("/:id", authorize("teacher", "admin"), updateResult);
+router.delete("/:id", authorize("teacher", "admin"), deleteResult);
+router.get("/teacher", authorize("teacher", "admin"), getTeacherResults);
+router.get("/student/:id", getStudentResults);
 
 export default router;

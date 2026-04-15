@@ -9,22 +9,16 @@ import {
 
 import { protect } from "../middleware/authMiddleware.js";
 import { authorize } from "../middleware/roleMiddleware.js";
+import { requireSchoolAccess } from "../middleware/subscriptionMiddleware.js";
 
 const router = express.Router();
 
-// Admin sends message
-router.post("/", protect, authorize("admin"), sendMessage);
+router.use(protect, requireSchoolAccess);
 
-// All users receive messages
-router.get("/", protect, getMessages);
-
-// Admin updates message
-router.put("/:id", protect, authorize("admin"), updateMessage);
-
-// Admin deletes message
-router.delete("/:id", protect, authorize("admin"), deleteMessage);
-
-// Admin deletes all messages
-router.delete("/", protect, authorize("admin"), deleteAllMessages);
+router.post("/", authorize("admin"), sendMessage);
+router.get("/", getMessages);
+router.put("/:id", authorize("admin"), updateMessage);
+router.delete("/:id", authorize("admin"), deleteMessage);
+router.delete("/", authorize("admin"), deleteAllMessages);
 
 export default router;

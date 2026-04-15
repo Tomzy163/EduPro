@@ -1,5 +1,5 @@
 import User from "../models/User.js";
-import { io, users } from "../server.js";
+import { io, users } from "./socketState.js";
 
 export const emitToUserIds = ({ userIds = [], event, payload }) => {
   if (!event || !Array.isArray(userIds) || userIds.length === 0) return;

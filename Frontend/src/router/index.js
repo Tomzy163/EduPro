@@ -4,6 +4,7 @@ import Login from "../views/Login.vue";
 import Register from "../views/Register.vue";
 import ForgotPassword from "../views/ForgotPassword.vue";
 import ResetPassword from "../views/ResetPassword.vue";
+import SubscriptionView from "../views/Subscription.vue";
 
 import AdminDashboard from "../views/admin/Dashboard.vue";
 import TeacherDashboard from "../views/teacher/Dashboard.vue";
@@ -15,6 +16,11 @@ const routes = [
   { path: "/register", component: Register },
   { path: "/forgot-password", component: ForgotPassword },
   { path: "/reset-password", component: ResetPassword },
+  {
+    path: "/subscription",
+    component: SubscriptionView,
+    meta: { requiresAuth: true, role: "admin" },
+  },
   {
     path: "/dashboard/admin",
     component: AdminDashboard,
@@ -77,6 +83,14 @@ router.beforeEach((to, _from, next) => {
 
   if (to.meta.role && user?.role !== to.meta.role) {
     return next(getDashboardRouteForRole(user?.role));
+  }
+
+  if (user?.role === "admin") {
+    const limitedAccess = Boolean(user.subscription?.limitedAccess);
+
+    if (limitedAccess && to.path !== "/subscription") {
+      return next("/subscription");
+    }
   }
 
   return next();

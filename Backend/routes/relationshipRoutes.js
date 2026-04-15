@@ -11,17 +11,18 @@ import {
 
 import { protect } from "../middleware/authMiddleware.js";
 import { authorize } from "../middleware/roleMiddleware.js";
+import { requireSchoolAccess } from "../middleware/subscriptionMiddleware.js";
 
 const router = express.Router();
 
-router.post("/link", protect, authorize("admin"), linkParentToStudent);
+router.use(protect, requireSchoolAccess);
 
-router.get("/parent/:id", protect, authorize("admin", "parent"), getParentWithChildren);
-router.get("/student/:id", protect, authorize("admin"), getStudentWithParents);
-router.get("/history", protect, authorize("admin"), getLinkHistory);
-
-router.delete("/:id", protect, authorize("admin"), deleteLink);
-router.put("/:id", protect, authorize("admin"), updateLink);
-router.delete("/", protect, authorize("admin"), deleteAllLinks);
+router.post("/link", authorize("admin"), linkParentToStudent);
+router.get("/parent/:id", authorize("admin", "parent"), getParentWithChildren);
+router.get("/student/:id", authorize("admin"), getStudentWithParents);
+router.get("/history", authorize("admin"), getLinkHistory);
+router.delete("/:id", authorize("admin"), deleteLink);
+router.put("/:id", authorize("admin"), updateLink);
+router.delete("/", authorize("admin"), deleteAllLinks);
 
 export default router;

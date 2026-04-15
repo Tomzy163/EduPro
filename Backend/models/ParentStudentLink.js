@@ -22,4 +22,7 @@ const linkSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+linkSchema.index({ school: 1, parent: 1, student: 1 }, { unique: true });
+linkSchema.index({ school: 1, student: 1, createdAt: -1 });
+
 export default mongoose.model("ParentStudentLink", linkSchema);
