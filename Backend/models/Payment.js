@@ -16,10 +16,33 @@ const paymentSchema = new mongoose.Schema(
 
     receipt: String,
 
+    type: {
+      type: String,
+      enum: ["school_fee", "subscription"],
+      default: "school_fee",
+    },
+
+    plan: {
+      type: String,
+      enum: ["normal", "supreme", "gold", "platinum", null],
+      default: null,
+    },
+
+    description: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
     status: {
       type: String,
       enum: ["pending", "approved", "rejected"],
       default: "pending",
+    },
+
+    confirmedAt: {
+      type: Date,
+      default: null,
     },
   },
   { timestamps: true }

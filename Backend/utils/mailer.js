@@ -70,7 +70,7 @@ export const getMailerFromAddress = () =>
 
 export const isMailerConfigured = () => Boolean(getTransportConfig());
 
-export const sendPasswordResetEmail = async ({ to, name, resetLink }) => {
+export const sendEmail = async ({ to, subject, text, html }) => {
   const transportConfig = getTransportConfig();
 
   if (!transportConfig) {
@@ -84,6 +84,19 @@ export const sendPasswordResetEmail = async ({ to, name, resetLink }) => {
 
   await transporter.sendMail({
     from: getMailerFromAddress(),
+    to,
+    subject,
+    text,
+    html,
+  });
+
+  return {
+    sent: true,
+  };
+};
+
+export const sendPasswordResetEmail = async ({ to, name, resetLink }) => {
+  return sendEmail({
     to,
     subject: "EduPro password reset",
     text: `Hello ${name},\n\nUse the link below to reset your password:\n${resetLink}\n\nThis link expires in 15 minutes.`,
@@ -105,8 +118,4 @@ export const sendPasswordResetEmail = async ({ to, name, resetLink }) => {
       </div>
     `,
   });
-
-  return {
-    sent: true,
-  };
 };

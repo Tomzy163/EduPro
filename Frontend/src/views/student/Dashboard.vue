@@ -5,6 +5,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import Navbar from "@/components/Navbar.vue";
 import Notifications from "@/components/Notifications.vue";
+import ProfileManager from "@/components/ProfileManager.vue";
 import PerformanceChart from "@/components/PerformanceChart.vue";
 import AttendanceChart from "@/components/AttendanceChart.vue";
 import SchoolAccountCard from "@/components/SchoolAccountCard.vue";
@@ -218,6 +219,7 @@ onUnmounted(() => {
     </header>
 
     <Notifications />
+    <ProfileManager />
 
     <section class="grid-3">
       <div class="stat-card accent-teal">

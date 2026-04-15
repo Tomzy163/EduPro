@@ -85,12 +85,59 @@ export const getUsers = async (req, res) => {
   }
 };
 
+export const getMyProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select("-password").populate("school");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const updateMyProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const nextEmail = String(req.body.email || user.email).trim().toLowerCase();
+
+    const existingUser = await User.findOne({
+      _id: { $ne: user._id },
+      school: user.school,
+      email: nextEmail,
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ message: "Another user already uses this email" });
+    }
+
+    user.name = String(req.body.name || user.name).trim();
+    user.email = nextEmail;
+    user.phoneNumber = String(req.body.phoneNumber || "").trim();
+
+    await user.save();
+
+    const updatedUser = await User.findById(user._id).select("-password").populate("school");
+    res.json(updatedUser);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 /* =========================
    CREATE USER (ADMIN)
 ========================= */
 export const createUser = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, phoneNumber, password, role } = req.body;
 
     const existingUser = await User.findOne({
       email,
@@ -106,6 +153,7 @@ export const createUser = async (req, res) => {
             const user = await User.create({
       name,
       email,
+      phoneNumber: String(phoneNumber || "").trim(),
       password: hashedPassword,
       role, // ✅ use the role from frontend
       school: req.user.school._id,
@@ -155,14 +203,14 @@ export const getUser = async (req, res) => {
 ========================= */
 export const updateUser = async (req, res) => {
   try {
-    const { name, email, role } = req.body;
+    const { name, email, phoneNumber, role } = req.body;
 
     const user = await User.findOneAndUpdate(
       {
         _id: req.params.id,
         school: req.user.school,
       },
-      { name, email, role },
+      { name, email, phoneNumber, role },
       { new: true }
     );
 

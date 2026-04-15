@@ -3,10 +3,13 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import School from "../models/School.js";
-import { getSubscriptionSnapshot } from "../utils/subscription.js";
-import { sendPasswordResetEmail } from "../utils/mailer.js";
+import Payment from "../models/Payment.js";
+import { SUBSCRIPTION_PLANS, getSubscriptionSnapshot } from "../utils/subscription.js";
+import { sendEmail, sendPasswordResetEmail } from "../utils/mailer.js";
+import { sendSms } from "../utils/sms.js";
 
 const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const normalizePhoneNumber = (value = "") => String(value || "").trim();
 
 const generateToken = (user) => {
   return jwt.sign(
@@ -40,6 +43,7 @@ const buildAuthResponse = (user, school) => {
       id: user._id,
       name: user.name,
       email: user.email,
+      phoneNumber: user.phoneNumber || "",
       role: user.role,
       school: school.name,
       schoolId: school._id,
@@ -53,10 +57,14 @@ const buildAuthResponse = (user, school) => {
 
 export const register = async (req, res) => {
   try {
-    const { name, email, password, school: schoolName } = req.body;
+    const { name, email, phoneNumber, password, school: schoolName } = req.body;
 
     if (!schoolName) {
       return res.status(400).json({ message: "School is required" });
+    }
+
+    if (!phoneNumber) {
+      return res.status(400).json({ message: "Phone number is required" });
     }
 
     let school = await School.findOne({
@@ -76,6 +84,7 @@ export const register = async (req, res) => {
     const admin = await User.create({
       name,
       email: email.toLowerCase(),
+      phoneNumber: normalizePhoneNumber(phoneNumber),
       password: hashedPassword,
       role: "admin",
       school: school._id,
@@ -149,7 +158,7 @@ export const loginUser = async (req, res) => {
 
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, phoneNumber, password, role } = req.body;
 
     const existing = await User.findOne({
       email,
@@ -167,6 +176,7 @@ export const registerUser = async (req, res) => {
     const user = await User.create({
       name,
       email,
+      phoneNumber: normalizePhoneNumber(phoneNumber),
       password: hashedPassword,
       role,
       school: req.user.school._id,
@@ -180,10 +190,12 @@ export const registerUser = async (req, res) => {
 
 export const forgotPassword = async (req, res) => {
   try {
-    const { email, school } = req.body;
+    const { email, phoneNumber, school } = req.body;
 
-    if (!email || !school) {
-      return res.status(400).json({ message: "Email and school are required" });
+    if ((!email && !phoneNumber) || !school) {
+      return res.status(400).json({
+        message: "School and either an email address or phone number are required",
+      });
     }
 
     const schoolDoc = await School.findOne({
@@ -191,10 +203,20 @@ export const forgotPassword = async (req, res) => {
     });
     if (!schoolDoc) return res.status(404).json({ message: "School not found" });
 
-    const user = await User.findOne({
-      email: email.toLowerCase(),
+    const userQuery = {
       school: schoolDoc._id,
-    });
+      $or: [],
+    };
+
+    if (email) {
+      userQuery.$or.push({ email: email.toLowerCase() });
+    }
+
+    if (phoneNumber) {
+      userQuery.$or.push({ phoneNumber: normalizePhoneNumber(phoneNumber) });
+    }
+
+    const user = await User.findOne(userQuery);
     if (!user) return res.status(404).json({ message: "User not found in this school" });
 
     const token = crypto.randomBytes(32).toString("hex");
@@ -205,28 +227,53 @@ export const forgotPassword = async (req, res) => {
     const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
     const resetLink = `${clientUrl}/reset-password?token=${encodeURIComponent(token)}`;
 
-    try {
-      const emailResult = await sendPasswordResetEmail({
-        to: user.email,
-        name: user.name,
-        resetLink,
-      });
+    let emailSent = false;
+    let smsSent = false;
 
-      if (emailResult.sent) {
-        return res.json({
-          message: "Reset link sent to your email.",
-          emailSent: true,
+    if (email && user.email) {
+      try {
+        const emailResult = await sendPasswordResetEmail({
+          to: user.email,
+          name: user.name,
+          resetLink,
         });
+        emailSent = emailResult.sent;
+      } catch (mailError) {
+        console.error("FORGOT PASSWORD MAIL ERROR:", mailError);
       }
-    } catch (mailError) {
-      console.error("FORGOT PASSWORD MAIL ERROR:", mailError);
+    }
+
+    if (phoneNumber && user.phoneNumber) {
+      try {
+        const smsResult = await sendSms({
+          to: user.phoneNumber,
+          body: `EduPro password reset: ${resetLink} (expires in 15 minutes).`,
+        });
+        smsSent = smsResult.sent;
+      } catch (smsError) {
+        console.error("FORGOT PASSWORD SMS ERROR:", smsError);
+      }
+    }
+
+    if (emailSent || smsSent) {
+      return res.json({
+        message:
+          emailSent && smsSent
+            ? "Reset link sent through email and SMS."
+            : emailSent
+              ? "Reset link sent to your email."
+              : "Reset link sent to your phone number by SMS.",
+        emailSent,
+        smsSent,
+      });
     }
 
     res.json({
       message:
-        "Reset link generated successfully. Email delivery is not configured or failed on this device, so use the link below while testing locally.",
+        "Reset link generated successfully. Email or SMS delivery is not configured or failed on this device, so use the link below while testing locally.",
       resetLink,
-      emailSent: false,
+      emailSent,
+      smsSent,
     });
   } catch (error) {
     console.error(error);
@@ -305,6 +352,10 @@ export const subscribeSchool = async (req, res) => {
       return res.status(404).json({ message: "School not found" });
     }
 
+    if (!req.file) {
+      return res.status(400).json({ message: "Upload payment proof before activating a plan" });
+    }
+
     school.currentPlan = plan;
     school.subscriptionStatus = "active";
     school.subscriptionStartedAt = school.subscriptionStartedAt || new Date();
@@ -312,7 +363,44 @@ export const subscribeSchool = async (req, res) => {
 
     await school.save();
 
+    await Payment.create({
+      user: req.user._id,
+      amount: SUBSCRIPTION_PLANS[plan]?.price || 0,
+      receipt: req.file.path,
+      school: school._id,
+      status: "approved",
+      type: "subscription",
+      plan,
+      description: `${SUBSCRIPTION_PLANS[plan]?.name || plan} subscription`,
+      confirmedAt: new Date(),
+    });
+
     const subscription = getSubscriptionSnapshot(school);
+
+    if (req.user.email) {
+      try {
+        await sendEmail({
+          to: req.user.email,
+          subject: "EduPro subscription activated",
+          text: `Your ${SUBSCRIPTION_PLANS[plan]?.name || plan} subscription is now active for ${school.name}.`,
+        });
+      } catch (error) {
+        console.error("SUBSCRIPTION EMAIL ERROR:", error);
+      }
+    }
+
+    if (req.user.phoneNumber) {
+      try {
+        await sendSms({
+          to: req.user.phoneNumber,
+          body: `EduPro: ${SUBSCRIPTION_PLANS[plan]?.name || plan} is now active for ${school.name}.`,
+        });
+      } catch (error) {
+        console.error("SUBSCRIPTION SMS ERROR:", error);
+      }
+    }
+
+    req.app.get("io")?.emit("subscriptionUpdated");
 
     res.json({
       message: `${plan[0].toUpperCase()}${plan.slice(1)} plan activated successfully.`,

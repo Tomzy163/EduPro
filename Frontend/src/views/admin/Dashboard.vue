@@ -1,6 +1,7 @@
 <script setup>
-import Navbar from "@/components/Navbar.vue";
-import AdminAnalytics from "@/components/AdminAnalytics.vue";
+  import Navbar from "@/components/Navbar.vue";
+  import ProfileManager from "@/components/ProfileManager.vue";
+  import AdminAnalytics from "@/components/AdminAnalytics.vue";
 import AdminSubscriptionCenter from "@/components/admin/AdminSubscriptionCenter.vue";
 import AdminSchoolSetup from "@/components/admin/AdminSchoolSetup.vue";
 import AdminMessages from "@/components/admin/AdminMessages.vue";
@@ -25,6 +26,7 @@ import AdminPayments from "@/components/admin/AdminPayments.vue";
     </header>
 
     <AdminAnalytics />
+    <ProfileManager />
     <AdminSubscriptionCenter />
 
     <section class="dashboard-sections">

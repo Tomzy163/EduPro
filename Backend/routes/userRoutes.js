@@ -2,9 +2,11 @@
 import express from "express";
 import {
   createUser,
+  getMyProfile,
   getUsers,
   getUser,
   updateUser,
+  updateMyProfile,
   deleteUser,
   linkParentToStudent,
   assignTeacher,
@@ -21,6 +23,8 @@ const router = express.Router();
 
 // All routes protected
 router.use(protect);
+router.get("/profile", getMyProfile);
+router.put("/profile", updateMyProfile);
 router.use(requireSchoolAccess);
 
 // ADMIN ONLY ROUTES

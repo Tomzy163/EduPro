@@ -13,6 +13,7 @@ const loading = ref(false);
 const activePlan = ref("");
 const error = ref("");
 const success = ref("");
+const paymentProof = ref(null);
 
 const editablePlanPrices = {
   normal: 75000,
@@ -85,16 +86,26 @@ const loadSubscription = async () => {
 
 const activatePlan = async (plan) => {
   try {
+    if (!paymentProof.value) {
+      error.value = "Upload payment proof before activating a subscription plan.";
+      return;
+    }
+
     loading.value = true;
     activePlan.value = plan;
     error.value = "";
     success.value = "";
 
-    const data = await subscribeSchool(plan);
+    const formData = new FormData();
+    formData.append("plan", plan);
+    formData.append("receipt", paymentProof.value);
+
+    const data = await subscribeSchool(formData);
     subscription.value = data.subscription;
     school.value = data.school;
     auth.updateSubscription(data.subscription);
     success.value = data.message;
+    paymentProof.value = null;
 
     setTimeout(() => {
       router.push("/dashboard/admin");
@@ -105,6 +116,10 @@ const activatePlan = async (plan) => {
     loading.value = false;
     activePlan.value = "";
   }
+};
+
+const handleProofUpload = (event) => {
+  paymentProof.value = event.target.files?.[0] || null;
 };
 
 onMounted(async () => {
@@ -143,6 +158,13 @@ onMounted(async () => {
         </div>
 
         <div class="payment-grid">
+          <article class="payment-pill payment-note">
+            <span>Payment Proof</span>
+            <div class="proof-upload">
+              <input type="file" accept=".png,.jpg,.jpeg,.pdf" class="input" @change="handleProofUpload" />
+              <strong>{{ paymentProof?.name || "Upload bank transfer screenshot or PDF proof" }}</strong>
+            </div>
+          </article>
           <article class="payment-pill">
             <span>Bank Name</span>
             <strong>{{ paymentDetails.bankName || "Set SUBSCRIPTION_BANK_NAME in backend/.env" }}</strong>
@@ -342,6 +364,11 @@ onMounted(async () => {
 
 .payment-note {
   grid-column: 1 / -1;
+}
+
+.proof-upload {
+  display: grid;
+  gap: 10px;
 }
 
 .plan-card {

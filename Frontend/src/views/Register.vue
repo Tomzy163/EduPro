@@ -5,6 +5,7 @@ import { register } from "../services/authService";
 
 const name = ref("");
 const email = ref("");
+const phoneNumber = ref("");
 const password = ref("");
 const confirmPassword = ref("");
 const schoolName = ref("");
@@ -28,7 +29,7 @@ const handleRegister = async () => {
 //   return;
 // }
 
-    if (!name.value || !email.value || !password.value || !schoolName.value) {
+    if (!name.value || !email.value || !phoneNumber.value || !password.value || !schoolName.value) {
       error.value = "All fields are required";
       return;
     }
@@ -47,6 +48,7 @@ const handleRegister = async () => {
           console.log("Sending:", {
         name: name.value,
         email: email.value,
+        phoneNumber: phoneNumber.value,
         password: password.value,
         school: schoolName.value,
       });
@@ -104,6 +106,11 @@ const handleRegister = async () => {
         <div class="form-group">
           <label for="email">Email</label>
           <input v-model="email" id="email" type="email" placeholder="Enter your email" class="input" />
+        </div>
+
+        <div class="form-group">
+          <label for="phone">Phone Number</label>
+          <input v-model="phoneNumber" id="phone" type="text" placeholder="Enter your phone number" class="input" />
         </div>
 
         <!-- Password -->

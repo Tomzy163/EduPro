@@ -10,6 +10,7 @@ const pageSize = 8;
 
 const name = ref("");
 const email = ref("");
+const phoneNumber = ref("");
 const password = ref("");
 const role = ref("teacher");
 
@@ -48,12 +49,14 @@ const addUser = async () => {
   await createUser({
     name: name.value,
     email: email.value,
+    phoneNumber: phoneNumber.value,
     password: password.value,
     role: role.value,
   });
 
   name.value = "";
   email.value = "";
+  phoneNumber.value = "";
   password.value = "";
   role.value = "teacher";
 
@@ -75,6 +78,7 @@ onMounted(fetchUsers);
     <div class="form-grid">
       <input v-model="name" placeholder="Name" class="input" />
       <input v-model="email" placeholder="Email" class="input" />
+      <input v-model="phoneNumber" placeholder="Phone number" class="input" />
       <input v-model="password" placeholder="Password" class="input" />
 
       <select v-model="role" class="input">
@@ -108,6 +112,7 @@ onMounted(fetchUsers);
           <tr>
             <th>Name</th>
             <th>Email</th>
+            <th>Phone</th>
             <th>Role</th>
             <th>Created</th>
             <th>Action</th>
@@ -118,6 +123,7 @@ onMounted(fetchUsers);
           <tr v-for="user in paginatedUsers" :key="user._id">
             <td>{{ user.name }}</td>
             <td>{{ user.email }}</td>
+            <td>{{ user.phoneNumber || "-" }}</td>
             <td><span class="badge primary">{{ user.role }}</span></td>
             <td>{{ new Date(user.createdAt).toLocaleDateString() }}</td>
             <td>

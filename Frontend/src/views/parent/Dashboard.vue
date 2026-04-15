@@ -7,10 +7,10 @@ import { createPayment, getMyPayments } from "../../services/paymentService";
 import { getAttendance } from "../../services/attendanceService";
 import Navbar from "@/components/Navbar.vue";
 import Notifications from "@/components/Notifications.vue";
+import ProfileManager from "@/components/ProfileManager.vue";
 import SchoolAccountCard from "@/components/SchoolAccountCard.vue";
 import socket from "@/socket";
 import {
-  exportTimetableExcel,
   exportTimetablePdf,
   sortTimetableSlots,
 } from "@/utils/timetableExport";
@@ -241,10 +241,12 @@ const downloadAllTimetables = () => {
     return;
   }
 
-  exportTimetableExcel({
+  exportTimetablePdf({
     slots: timetable.value,
-    fileName: `${(user.name || "parent").replace(/\s+/g, "-").toLowerCase()}-children-timetables.xlsx`,
-    sheetName: "Children Timetables",
+    schoolName: school?.name || user?.school || "EduPro School",
+    title: "All Linked Children Timetables",
+    subtitle: `Parent copy generated for ${user.name || "Parent"}`,
+    fileName: `${(user.name || "parent").replace(/\s+/g, "-").toLowerCase()}-children-timetables.pdf`,
   });
 };
 
@@ -282,6 +284,7 @@ onUnmounted(() => {
     </header>
 
     <Notifications />
+    <ProfileManager />
 
     <div v-if="statusMessage" class="status-banner" :class="`status-${statusTone}`">
       {{ statusMessage }}

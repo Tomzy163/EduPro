@@ -25,7 +25,7 @@ export const getSubscriptionStatus = async () => {
   return res.data;
 };
 
-export const subscribeSchool = async (plan) => {
-  const res = await API.post("/auth/subscribe", { plan });
+export const subscribeSchool = async (payload) => {
+  const res = await API.post("/auth/subscribe", payload);
   return res.data;
 };

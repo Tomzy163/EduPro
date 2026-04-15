@@ -1,6 +1,7 @@
 <script setup>
 import Navbar from "@/components/Navbar.vue";
 import Notifications from "@/components/Notifications.vue";
+import ProfileManager from "@/components/ProfileManager.vue";
 import SchoolAccountCard from "@/components/SchoolAccountCard.vue";
 import TeacherAnalytics from "@/components/teacher/TeacherAnalytics.vue";
 import TeacherResults from "@/components/teacher/TeacherResults.vue";
@@ -26,6 +27,7 @@ const school = JSON.parse(sessionStorage.getItem("school") || "null");
 
     <Notifications />
     <TeacherAnalytics />
+    <ProfileManager />
 
     <SchoolAccountCard
       :school="school"

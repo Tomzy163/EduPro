@@ -4,14 +4,15 @@ import { forgotPassword } from "../services/authService";
 
 const school = ref("");
 const email = ref("");
+const phoneNumber = ref("");
 const loading = ref(false);
 const error = ref("");
 const success = ref("");
 const resetLink = ref("");
 
 const submit = async () => {
-  if (!school.value || !email.value) {
-    error.value = "Enter your school name and email address.";
+  if (!school.value || (!email.value && !phoneNumber.value)) {
+    error.value = "Enter your school name and at least an email address or phone number.";
     return;
   }
 
@@ -23,6 +24,7 @@ const submit = async () => {
   try {
     const data = await forgotPassword({
       email: email.value,
+      phoneNumber: phoneNumber.value,
       school: school.value,
     });
 
@@ -61,6 +63,13 @@ const submit = async () => {
         v-model="email"
         type="email"
         placeholder="Email address"
+        class="input-field"
+      />
+
+      <input
+        v-model="phoneNumber"
+        type="text"
+        placeholder="Phone number (optional for SMS)"
         class="input-field"
       />
 
