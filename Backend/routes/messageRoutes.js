@@ -5,7 +5,7 @@ import {
   updateMessage,
   deleteMessage,
   deleteAllMessages,
-} from "../controllers/messageController.js";
+} from "../controllers/messageControllerV2.js";
 
 import { protect } from "../middleware/authMiddleware.js";
 import { authorize } from "../middleware/roleMiddleware.js";

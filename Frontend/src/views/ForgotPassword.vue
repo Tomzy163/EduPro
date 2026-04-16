@@ -9,6 +9,7 @@ const loading = ref(false);
 const error = ref("");
 const success = ref("");
 const resetLink = ref("");
+const previewUrl = ref("");
 
 const submit = async () => {
   if (!school.value || (!email.value && !phoneNumber.value)) {
@@ -20,6 +21,7 @@ const submit = async () => {
   error.value = "";
   success.value = "";
   resetLink.value = "";
+  previewUrl.value = "";
 
   try {
     const data = await forgotPassword({
@@ -30,9 +32,11 @@ const submit = async () => {
 
     success.value = data.message || "Reset instructions sent successfully.";
     resetLink.value = data.resetLink || "";
+    previewUrl.value = data.previewUrl || "";
     email.value = "";
   } catch (err) {
     resetLink.value = err.response?.data?.resetLink || "";
+    previewUrl.value = err.response?.data?.previewUrl || "";
     error.value = err.response?.data?.message || "Unable to send reset instructions.";
   } finally {
     loading.value = false;
@@ -46,7 +50,7 @@ const submit = async () => {
       <p class="eyebrow">Account Recovery</p>
       <h1>Forgot Password</h1>
       <p class="copy">
-        Enter the school name and email attached to your account. We will generate a secure reset link.
+        Enter the school name and email attached to your account. We will send a secure reset email, and SMS can be used when a phone number is available.
       </p>
 
       <p v-if="error" class="banner danger">{{ error }}</p>
@@ -77,10 +81,18 @@ const submit = async () => {
         {{ loading ? "Sending..." : "Send Reset Link" }}
       </button>
 
+      <div v-if="previewUrl" class="preview">
+        <strong>Email Preview</strong>
+        <p class="preview-copy">
+          SMTP is not fully configured on this machine, so the reset email was saved to a local preview for testing.
+        </p>
+        <a :href="previewUrl" target="_blank" rel="noreferrer">Open local email preview</a>
+      </div>
+
       <div v-if="resetLink" class="preview">
         <strong>Reset Link</strong>
         <p class="preview-copy">
-          Use this link locally if email delivery is not configured yet.
+          Use this link only for local development if direct delivery is unavailable.
         </p>
         <a :href="resetLink">{{ resetLink }}</a>
       </div>

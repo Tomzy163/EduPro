@@ -1,7 +1,8 @@
 // frontend/src/socket.js
 import { io } from "socket.io-client";
+import { socketBaseUrl } from "./services/runtimeConfig";
 
-const socket = io("http://localhost:5000", {
+const socket = io(socketBaseUrl, {
   autoConnect: false,
 });
 

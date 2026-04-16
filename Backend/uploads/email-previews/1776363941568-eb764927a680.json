@@ -1,0 +1,7 @@
+{
+  "to": "student.20260416192539@example.com",
+  "subject": "[EduPro] System Announcement",
+  "text": "Hello student user,\n\nSubscription webhook test message\n\nSent by Webhook Admin (admin) at Webhook School 20260416192539.",
+  "htmlFile": "1776363941568-eb764927a680.html",
+  "createdAt": "2026-04-16T18:25:41.571Z"
+}

@@ -25,9 +25,22 @@ dotenv.config();
 connectDB();
 
 const app = express();
+const clientOrigin = process.env.CLIENT_URL || "http://localhost:5173";
 
-app.use(cors());
-app.use(express.json());
+app.use(
+  cors({
+    origin: clientOrigin,
+  })
+);
+app.use(
+  express.json({
+    verify: (req, _res, buffer) => {
+      if (buffer?.length) {
+        req.rawBody = buffer.toString("utf8");
+      }
+    },
+  })
+);
 app.use("/uploads", express.static("uploads"));
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
@@ -44,7 +57,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: clientOrigin,
   },
 });
 

@@ -29,3 +29,10 @@ export const subscribeSchool = async (payload) => {
   const res = await API.post("/auth/subscribe", payload);
   return res.data;
 };
+
+export const verifySubscriptionPayment = async (reference) => {
+  const res = await API.get("/auth/subscribe/verify", {
+    params: { reference },
+  });
+  return res.data;
+};

@@ -1,10 +1,15 @@
 <script setup>
 import { computed, onMounted, ref } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "@/store/authStore";
-import { getSubscriptionStatus, subscribeSchool } from "@/services/authService";
+import {
+  getSubscriptionStatus,
+  subscribeSchool,
+  verifySubscriptionPayment,
+} from "@/services/authService";
 
 const router = useRouter();
+const route = useRoute();
 const auth = useAuthStore();
 
 const school = ref(null);
@@ -13,7 +18,7 @@ const loading = ref(false);
 const activePlan = ref("");
 const error = ref("");
 const success = ref("");
-const paymentProof = ref(null);
+const verifyingReference = ref("");
 
 const editablePlanPrices = {
   normal: 75000,
@@ -69,11 +74,13 @@ const plans = computed(() =>
 );
 
 const paymentDetails = computed(() => subscription.value?.paymentDetails || {});
+const paymentCurrency = computed(() => paymentDetails.value.currency || "NGN");
+const paystackReady = computed(() => Boolean(paymentDetails.value.paystackEnabled));
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD",
+    currency: paymentCurrency.value,
     maximumFractionDigits: 0,
   }).format(Number(amount || 0));
 
@@ -86,45 +93,64 @@ const loadSubscription = async () => {
 
 const activatePlan = async (plan) => {
   try {
-    if (!paymentProof.value) {
-      error.value = "Upload payment proof before activating a subscription plan.";
-      return;
-    }
-
     loading.value = true;
     activePlan.value = plan;
     error.value = "";
     success.value = "";
 
-    const formData = new FormData();
-    formData.append("plan", plan);
-    formData.append("receipt", paymentProof.value);
+    const data = await subscribeSchool({ plan });
+    success.value = data.message || "Redirecting to secure checkout...";
 
-    const data = await subscribeSchool(formData);
-    subscription.value = data.subscription;
-    school.value = data.school;
-    auth.updateSubscription(data.subscription);
-    success.value = data.message;
-    paymentProof.value = null;
+    if (data.authorizationUrl) {
+      window.location.assign(data.authorizationUrl);
+      return;
+    }
 
-    setTimeout(() => {
-      router.push("/dashboard/admin");
-    }, 900);
+    throw new Error("Paystack checkout URL was not returned by the server.");
   } catch (err) {
-    error.value = err.response?.data?.message || "Unable to activate this plan right now.";
+    error.value =
+      err.response?.data?.message || err.message || "Unable to start this payment right now.";
   } finally {
     loading.value = false;
     activePlan.value = "";
   }
 };
 
-const handleProofUpload = (event) => {
-  paymentProof.value = event.target.files?.[0] || null;
+const verifyReturnedPayment = async () => {
+  const reference = String(route.query.reference || route.query.trxref || "").trim();
+
+  if (!reference) {
+    return;
+  }
+
+  try {
+    verifyingReference.value = reference;
+    error.value = "";
+    success.value = "Confirming your payment and waiting for the webhook to finalize access...";
+
+    const data = await verifySubscriptionPayment(reference);
+    subscription.value = data.subscription;
+    school.value = data.school;
+    auth.updateSubscription(data.subscription);
+    success.value = data.message;
+
+    await router.replace({ path: route.path, query: {} });
+
+    setTimeout(() => {
+      router.push("/dashboard/admin");
+    }, 900);
+  } catch (err) {
+    error.value =
+      err.response?.data?.message || "Payment returned from Paystack, but verification is still pending.";
+  } finally {
+    verifyingReference.value = "";
+  }
 };
 
 onMounted(async () => {
   try {
     await loadSubscription();
+    await verifyReturnedPayment();
   } catch (err) {
     error.value = err.response?.data?.message || "Unable to load subscription details.";
   }
@@ -150,37 +176,37 @@ onMounted(async () => {
 
       <section class="card payment-card">
         <div>
-          <p class="eyebrow">Subscription Payment Details</p>
-          <h2>Plan Pricing And Account Details</h2>
+          <p class="eyebrow">Secure Payment Flow</p>
+          <h2>Paystack Checkout And Automatic Activation</h2>
           <p class="section-copy">
-            The plan prices shown below can be updated directly inside this page, and the bank details come from your backend environment settings.
+            Subscription checkout now runs through Paystack, and your school is activated automatically by a verified backend webhook after a successful payment.
+          </p>
+          <p v-if="!paystackReady" class="banner danger config-banner">
+            Paystack is not configured on the backend yet. Add your `PAYSTACK_SECRET_KEY` and webhook URL before starting live subscription payments.
           </p>
         </div>
 
         <div class="payment-grid">
           <article class="payment-pill payment-note">
-            <span>Payment Proof</span>
-            <div class="proof-upload">
-              <input type="file" accept=".png,.jpg,.jpeg,.pdf" class="input" @change="handleProofUpload" />
-              <strong>{{ paymentProof?.name || "Upload bank transfer screenshot or PDF proof" }}</strong>
-            </div>
+            <span>Provider</span>
+            <strong>{{ paymentDetails.provider || "Paystack" }}</strong>
           </article>
           <article class="payment-pill">
-            <span>Bank Name</span>
-            <strong>{{ paymentDetails.bankName || "Set SUBSCRIPTION_BANK_NAME in backend/.env" }}</strong>
+            <span>Currency</span>
+            <strong>{{ paymentDetails.currency || "NGN" }}</strong>
           </article>
           <article class="payment-pill">
-            <span>Account Name</span>
-            <strong>{{ paymentDetails.accountName || "Set SUBSCRIPTION_ACCOUNT_NAME in backend/.env" }}</strong>
+            <span>Webhook</span>
+            <strong>/api/auth/paystack/webhook</strong>
           </article>
           <article class="payment-pill">
-            <span>Account Number</span>
-            <strong>{{ paymentDetails.accountNumber || "Set SUBSCRIPTION_ACCOUNT_NUMBER in backend/.env" }}</strong>
+            <span>Verification</span>
+            <strong>Webhook first, backup verify on return</strong>
           </article>
           <article class="payment-pill payment-note">
-            <span>Activation Note</span>
+            <span>Automation Note</span>
             <strong>{{
-              paymentDetails.note || "After confirming payment, click the plan below to activate it immediately."
+              paymentDetails.note || "No receipt upload and no manual activate button are required anymore."
             }}</strong>
           </article>
         </div>
@@ -214,15 +240,19 @@ onMounted(async () => {
 
           <button
             class="btn btn-primary"
-            :disabled="loading"
+            :disabled="loading || verifyingReference || !paystackReady"
             @click="activatePlan(plan.id)"
           >
             {{
-              loading && activePlan === plan.id
-                ? "Activating..."
-                : subscription?.plan === plan.id && subscription?.status === "active"
-                  ? "Current Plan"
-                  : `Pay And Activate ${plan.name}`
+              !paystackReady
+                ? "Paystack Not Ready"
+                : loading && activePlan === plan.id
+                  ? "Redirecting..."
+                  : verifyingReference
+                    ? "Verifying payment..."
+                  : subscription?.plan === plan.id && subscription?.status === "active"
+                    ? "Current Plan"
+                    : `Pay ${plan.name}`
             }}
           </button>
         </article>
@@ -313,6 +343,10 @@ onMounted(async () => {
 .banner.danger {
   background: rgba(220, 38, 38, 0.12);
   color: #991b1b;
+}
+
+.config-banner {
+  margin-top: 18px;
 }
 
 .plans-grid {

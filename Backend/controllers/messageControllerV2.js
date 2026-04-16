@@ -64,7 +64,6 @@ export const sendMessage = async (req, res) => {
         : { school: schoolId, role: roleTarget };
 
     const recipients = await User.find(query).select("_id name email role");
-
     const senderRecipient = {
       _id: req.user._id,
       name: req.user.name,
@@ -85,18 +84,12 @@ export const sendMessage = async (req, res) => {
       title,
       content,
       sender: req.user._id,
-  recipients: [...recipients.map(u => u._id), req.user._id], // ✅ FIX
-  roleTarget,
-  school: req.user.school._id,
-});
+      recipients: uniqueRecipients.map((user) => user._id),
+      roleTarget,
+      school: schoolId,
+    });
 
-    message.recipients = uniqueRecipients.map((user) => user._id);
-    message.roleTarget = roleTarget || "all";
-    await message.save();
-
-    recipients = uniqueRecipients;
-
-    recipients.forEach((user) => {
+    uniqueRecipients.forEach((user) => {
       deliverRealtimeMessage({
         userId: user._id,
         title,
@@ -112,16 +105,14 @@ export const sendMessage = async (req, res) => {
             to: user.email,
             subject: `[EduPro] ${title}`,
             text: `Hello ${user.name},\n\n${content}\n\nSent by ${req.user.name} (${req.user.role}) at ${req.user.school.name}.`,
-            html: `
-              <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
-                <h2>${title}</h2>
-                <p>Hello ${user.name},</p>
-                <p>${content}</p>
-                <p style="margin-top: 20px; color: #475569;">
-                  Sent by ${req.user.name} (${req.user.role}) at ${req.user.school.name}.
-                </p>
-              </div>
-            `,
+            html: buildEmailHtml({
+              title,
+              content,
+              recipientName: user.name,
+              senderName: req.user.name,
+              senderRole: req.user.role,
+              schoolName: req.user.school.name,
+            }),
           })
         )
     );
@@ -133,7 +124,6 @@ export const sendMessage = async (req, res) => {
   }
 };
 
-// GET USER MESSAGES
 export const getMessages = async (req, res) => {
   try {
     const messages = await Message.find({
@@ -150,7 +140,6 @@ export const getMessages = async (req, res) => {
   }
 };
 
-// DELETE MESSAGE (Admin)
 export const deleteMessage = async (req, res) => {
   try {
     const message = await Message.findById(req.params.id);
@@ -159,7 +148,6 @@ export const deleteMessage = async (req, res) => {
       return res.status(404).json({ message: "Message not found" });
     }
 
-    // Optional: ensure admin can only delete messages from their school
     if (message.school.toString() !== req.user.school._id.toString()) {
       return res.status(403).json({ message: "Unauthorized" });
     }
@@ -172,25 +160,21 @@ export const deleteMessage = async (req, res) => {
   }
 };
 
-// UPDATE MESSAGE
 export const updateMessage = async (req, res) => {
   try {
     const { title, content } = req.body;
-
     const message = await Message.findById(req.params.id);
 
     if (!message) {
       return res.status(404).json({ message: "Message not found" });
     }
 
-    // Only sender can edit
     if (message.sender.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
     message.title = title || message.title;
     message.content = content || message.content;
-
     await message.save();
 
     res.json(message);
@@ -199,7 +183,6 @@ export const updateMessage = async (req, res) => {
   }
 };
 
-// DELETE ALL SENT MESSAGES
 export const deleteAllMessages = async (req, res) => {
   try {
     await Message.deleteMany({

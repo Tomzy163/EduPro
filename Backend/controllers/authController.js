@@ -5,11 +5,87 @@ import crypto from "crypto";
 import School from "../models/School.js";
 import Payment from "../models/Payment.js";
 import { SUBSCRIPTION_PLANS, getSubscriptionSnapshot } from "../utils/subscription.js";
-import { sendEmail, sendPasswordResetEmail } from "../utils/mailer.js";
+import { isMailerConfigured, sendPasswordResetEmail } from "../utils/mailer.js";
 import { sendSms } from "../utils/sms.js";
+import {
+  generatePaystackReference,
+  initializePaystackTransaction,
+  verifyPaystackSignature,
+  verifyPaystackTransaction,
+} from "../utils/paystack.js";
+import {
+  activateSubscriptionFromPayment,
+  isValidSubscriptionPlan,
+} from "../utils/subscriptionActivation.js";
 
 const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const normalizePhoneNumber = (value = "") => String(value || "").trim();
+const SUBSCRIPTION_CURRENCY = process.env.PAYSTACK_CURRENCY || "NGN";
+const PAYSTACK_SUCCESS_STATUSES = new Set(["success", "successful"]);
+const isPaystackConfigured = () => Boolean(process.env.PAYSTACK_SECRET_KEY);
+
+const resolveServerBaseUrl = () =>
+  (process.env.SERVER_URL ||
+    process.env.API_BASE_URL ||
+    `http://localhost:${process.env.PORT || 3000}`).replace(/\/+$/, "");
+
+const normalizePlan = (value = "") => String(value || "").trim().toLowerCase();
+
+const syncExpiredSubscription = async (school) => {
+  const subscription = getSubscriptionSnapshot(school);
+
+  if (!subscription.hasAppAccess && school.subscriptionStatus !== "expired") {
+    school.subscriptionStatus = "expired";
+    await school.save();
+  }
+
+  return subscription;
+};
+
+const extractMetadataValue = (metadata, key) => {
+  if (!metadata || typeof metadata !== "object") {
+    return "";
+  }
+
+  const directValue =
+    metadata[key] ??
+    metadata[key.toLowerCase()] ??
+    metadata[key.replace(/[A-Z]/g, (char) => `_${char.toLowerCase()}`)];
+
+  if (directValue) {
+    return directValue;
+  }
+
+  const customField = Array.isArray(metadata.custom_fields)
+    ? metadata.custom_fields.find((field) => {
+        const variableName = String(field?.variable_name || "").toLowerCase();
+        const displayName = String(field?.display_name || "").toLowerCase();
+        const lookup = key.toLowerCase();
+
+        return variableName === lookup || displayName === lookup;
+      })
+    : null;
+
+  return customField?.value || "";
+};
+
+const extractSubscriptionPaymentContext = (payload = {}) => {
+  const metadata = payload.metadata || {};
+
+  return {
+    metadata,
+    userId:
+      extractMetadataValue(metadata, "userId") ||
+      extractMetadataValue(metadata, "user_id"),
+    plan: normalizePlan(
+      extractMetadataValue(metadata, "plan") ||
+        extractMetadataValue(metadata, "planName")
+    ),
+    schoolId:
+      extractMetadataValue(metadata, "schoolId") ||
+      extractMetadataValue(metadata, "school_id"),
+  };
+};
 
 const generateToken = (user) => {
   return jwt.sign(
@@ -133,7 +209,7 @@ export const loginUser = async (req, res) => {
       return res.status(400).json({ message: "Invalid password" });
     }
 
-    const subscription = getSubscriptionSnapshot(school);
+    const subscription = await syncExpiredSubscription(school);
 
     if (!subscription.hasAppAccess && user.role !== "admin") {
       return res.status(403).json({
@@ -142,11 +218,6 @@ export const loginUser = async (req, res) => {
         code: "SCHOOL_ACCESS_BLOCKED",
         subscription,
       });
-    }
-
-    if (!subscription.hasAppAccess && school.subscriptionStatus !== "expired") {
-      school.subscriptionStatus = "expired";
-      await school.save();
     }
 
     res.json(buildAuthResponse(user, school));
@@ -229,6 +300,10 @@ export const forgotPassword = async (req, res) => {
 
     let emailSent = false;
     let smsSent = false;
+    let emailDeliveryMode = "";
+    let emailPreviewUrl = "";
+    let emailDeliveryFailed = false;
+    const mailerConfigured = isMailerConfigured();
 
     if (email && user.email) {
       try {
@@ -238,7 +313,10 @@ export const forgotPassword = async (req, res) => {
           resetLink,
         });
         emailSent = emailResult.sent;
+        emailDeliveryMode = emailResult.mode || "";
+        emailPreviewUrl = emailResult.previewUrl || "";
       } catch (mailError) {
+        emailDeliveryFailed = true;
         console.error("FORGOT PASSWORD MAIL ERROR:", mailError);
       }
     }
@@ -255,25 +333,38 @@ export const forgotPassword = async (req, res) => {
       }
     }
 
+    if (email && mailerConfigured && !emailSent && emailDeliveryFailed && !smsSent) {
+      return res.status(502).json({
+        message:
+          "The reset link was generated, but email delivery failed. Check your SMTP or SendGrid configuration and try again.",
+      });
+    }
+
     if (emailSent || smsSent) {
       return res.json({
         message:
-          emailSent && smsSent
+          emailSent && emailDeliveryMode === "preview"
+            ? "Reset email generated successfully and saved to the local mail preview."
+            : emailSent && smsSent
             ? "Reset link sent through email and SMS."
             : emailSent
               ? "Reset link sent to your email."
               : "Reset link sent to your phone number by SMS.",
         emailSent,
         smsSent,
+        emailDeliveryMode,
+        previewUrl: emailPreviewUrl,
       });
     }
 
     res.json({
       message:
-        "Reset link generated successfully. Email or SMS delivery is not configured or failed on this device, so use the link below while testing locally.",
+        "Reset link generated successfully. A real email or SMS provider is not configured on this device yet, so use the link below while testing locally.",
       resetLink,
       emailSent,
       smsSent,
+      emailDeliveryMode,
+      previewUrl: emailPreviewUrl,
     });
   } catch (error) {
     console.error(error);
@@ -322,12 +413,7 @@ export const getSubscriptionStatus = async (req, res) => {
       return res.status(404).json({ message: "School not found" });
     }
 
-    const subscription = getSubscriptionSnapshot(school);
-
-    if (!subscription.hasAppAccess && school.subscriptionStatus !== "expired") {
-      school.subscriptionStatus = "expired";
-      await school.save();
-    }
+    const subscription = await syncExpiredSubscription(school);
 
     res.json({
       school: buildSchoolPayload(school),
@@ -340,9 +426,9 @@ export const getSubscriptionStatus = async (req, res) => {
 
 export const subscribeSchool = async (req, res) => {
   try {
-    const { plan } = req.body;
+    const plan = normalizePlan(req.body.plan);
 
-    if (!["normal", "supreme", "gold", "platinum"].includes(plan)) {
+    if (!isValidSubscriptionPlan(plan)) {
       return res.status(400).json({ message: "Select a valid subscription plan" });
     }
 
@@ -352,62 +438,238 @@ export const subscribeSchool = async (req, res) => {
       return res.status(404).json({ message: "School not found" });
     }
 
-    if (!req.file) {
-      return res.status(400).json({ message: "Upload payment proof before activating a plan" });
+    if (!isPaystackConfigured()) {
+      return res.status(503).json({
+        message:
+          "Paystack is not configured on the server yet. Add PAYSTACK_SECRET_KEY before starting a subscription payment.",
+      });
     }
 
-    school.currentPlan = plan;
-    school.subscriptionStatus = "active";
-    school.subscriptionStartedAt = school.subscriptionStartedAt || new Date();
-    school.subscribedAt = new Date();
+    const currentSubscription = await syncExpiredSubscription(school);
 
-    await school.save();
+    if (
+      currentSubscription.status === "active" &&
+      currentSubscription.plan === plan &&
+      currentSubscription.subscriptionEndsAt
+    ) {
+      return res.status(409).json({
+        message: `The ${SUBSCRIPTION_PLANS[plan]?.name || plan} plan is already active until ${new Date(currentSubscription.subscriptionEndsAt).toLocaleDateString()}.`,
+        subscription: currentSubscription,
+      });
+    }
+
+    if (!req.user.email) {
+      return res.status(400).json({
+        message:
+          "The admin account needs a valid email address before a Paystack subscription can be started.",
+      });
+    }
+
+    const reference = generatePaystackReference(plan);
+    const amount = Number(SUBSCRIPTION_PLANS[plan]?.price || 0);
+    const callbackUrl =
+      process.env.PAYSTACK_CALLBACK_URL ||
+      `${process.env.CLIENT_URL || "http://localhost:5173"}/subscription`;
+    const metadata = {
+      userId: req.user._id.toString(),
+      schoolId: school._id.toString(),
+      schoolName: school.name,
+      plan,
+      planName: SUBSCRIPTION_PLANS[plan]?.name || plan,
+      transactionType: "subscription",
+    };
+
+    const paystackResponse = await initializePaystackTransaction({
+      email: req.user.email,
+      amount: Math.round(amount * 100),
+      currency: SUBSCRIPTION_CURRENCY,
+      reference,
+      callback_url: callbackUrl,
+      metadata,
+    });
 
     await Payment.create({
       user: req.user._id,
-      amount: SUBSCRIPTION_PLANS[plan]?.price || 0,
-      receipt: req.file.path,
+      amount,
       school: school._id,
-      status: "approved",
+      currency: SUBSCRIPTION_CURRENCY,
+      reference,
+      gateway: "paystack",
+      gatewayStatus: "initialized",
+      status: "initiated",
       type: "subscription",
       plan,
       description: `${SUBSCRIPTION_PLANS[plan]?.name || plan} subscription`,
-      confirmedAt: new Date(),
+      customerEmail: req.user.email,
+      metadata,
     });
 
-    const subscription = getSubscriptionSnapshot(school);
+    res.json({
+      message: "Secure Paystack checkout initialized. Redirecting now.",
+      authorizationUrl: paystackResponse.data?.authorization_url || "",
+      accessCode: paystackResponse.data?.access_code || "",
+      reference,
+      school: buildSchoolPayload(school),
+      subscription: currentSubscription,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
-    if (req.user.email) {
-      try {
-        await sendEmail({
-          to: req.user.email,
-          subject: "EduPro subscription activated",
-          text: `Your ${SUBSCRIPTION_PLANS[plan]?.name || plan} subscription is now active for ${school.name}.`,
-        });
-      } catch (error) {
-        console.error("SUBSCRIPTION EMAIL ERROR:", error);
-      }
+export const verifySubscriptionPaymentStatus = async (req, res) => {
+  try {
+    if (!isPaystackConfigured()) {
+      return res.status(503).json({
+        message:
+          "Paystack verification is not available because PAYSTACK_SECRET_KEY is not configured on the server.",
+      });
     }
 
-    if (req.user.phoneNumber) {
-      try {
-        await sendSms({
-          to: req.user.phoneNumber,
-          body: `EduPro: ${SUBSCRIPTION_PLANS[plan]?.name || plan} is now active for ${school.name}.`,
-        });
-      } catch (error) {
-        console.error("SUBSCRIPTION SMS ERROR:", error);
-      }
+    const reference = String(
+      req.query.reference || req.params.reference || ""
+    ).trim();
+
+    if (!reference) {
+      return res.status(400).json({ message: "Payment reference is required." });
     }
+
+    const verification = await verifyPaystackTransaction(reference);
+    const transaction = verification.data;
+
+    if (!transaction) {
+      return res
+        .status(404)
+        .json({ message: "No Paystack transaction was found for this reference." });
+    }
+
+    if (!PAYSTACK_SUCCESS_STATUSES.has(String(transaction.status || "").toLowerCase())) {
+      return res.status(400).json({
+        message: "This Paystack transaction has not completed successfully yet.",
+        paymentStatus: transaction.status,
+      });
+    }
+
+    const { metadata, userId, plan, schoolId } = extractSubscriptionPaymentContext(
+      transaction
+    );
+
+    if (!schoolId || !userId || !isValidSubscriptionPlan(plan)) {
+      return res.status(400).json({
+        message:
+          "The successful payment is missing the subscription metadata required for activation.",
+      });
+    }
+
+    const activation = await activateSubscriptionFromPayment({
+      schoolId,
+      userId,
+      plan,
+      amount: Number(transaction.amount || 0) / 100,
+      reference: transaction.reference,
+      currency: transaction.currency || SUBSCRIPTION_CURRENCY,
+      gateway: "paystack",
+      gatewayStatus: transaction.gateway_response || transaction.status,
+      status: "success",
+      metadata,
+      customerEmail: transaction.customer?.email || "",
+      paidAt: transaction.paid_at ? new Date(transaction.paid_at) : new Date(),
+      channel: transaction.channel || "",
+      webhookEvent: "verification.backup",
+    });
 
     req.app.get("io")?.emit("subscriptionUpdated");
 
     res.json({
-      message: `${plan[0].toUpperCase()}${plan.slice(1)} plan activated successfully.`,
-      school: buildSchoolPayload(school),
-      subscription,
+      message: activation.activated
+        ? `${SUBSCRIPTION_PLANS[plan]?.name || plan} plan activated successfully.`
+        : activation.skippedReason ||
+          "Subscription payment has already been processed.",
+      school: buildSchoolPayload(activation.school),
+      subscription: activation.subscription,
+      reference: transaction.reference,
+      paymentStatus: transaction.status,
+      activated: activation.activated,
     });
   } catch (error) {
+    console.error("PAYSTACK VERIFY ERROR:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const paystackWebhook = async (req, res) => {
+  try {
+    if (!isPaystackConfigured()) {
+      return res.status(503).json({
+        message:
+          "Paystack webhook handling is unavailable because PAYSTACK_SECRET_KEY is not configured on the server.",
+      });
+    }
+
+    const signature = req.headers["x-paystack-signature"];
+    const signatureIsValid = verifyPaystackSignature({
+      rawBody: req.rawBody,
+      signature,
+    });
+
+    if (!signatureIsValid) {
+      return res.status(401).json({ message: "Invalid Paystack signature." });
+    }
+
+    const event = req.body;
+    const eventName = String(event?.event || "").toLowerCase();
+    const transaction = event?.data || {};
+
+    if (eventName !== "charge.success") {
+      if (eventName.startsWith("charge.") && transaction.reference) {
+        await Payment.findOneAndUpdate(
+          { reference: transaction.reference },
+          {
+            gatewayStatus: transaction.gateway_response || transaction.status || eventName,
+            status: PAYSTACK_SUCCESS_STATUSES.has(String(transaction.status || "").toLowerCase())
+              ? "success"
+              : "failed",
+            failureReason: transaction.gateway_response || "",
+            webhookEvent: eventName,
+          }
+        );
+      }
+
+      return res.status(200).json({ received: true });
+    }
+
+    const { metadata, userId, plan, schoolId } = extractSubscriptionPaymentContext(
+      transaction
+    );
+
+    if (!schoolId || !userId || !isValidSubscriptionPlan(plan)) {
+      return res.status(400).json({
+        message: "Missing required subscription metadata in Paystack webhook.",
+      });
+    }
+
+    await activateSubscriptionFromPayment({
+      schoolId,
+      userId,
+      plan,
+      amount: Number(transaction.amount || 0) / 100,
+      reference: transaction.reference,
+      currency: transaction.currency || SUBSCRIPTION_CURRENCY,
+      gateway: "paystack",
+      gatewayStatus: transaction.gateway_response || transaction.status,
+      status: "success",
+      metadata,
+      customerEmail: transaction.customer?.email || "",
+      paidAt: transaction.paid_at ? new Date(transaction.paid_at) : new Date(),
+      channel: transaction.channel || "",
+      webhookEvent: eventName,
+    });
+
+    req.app.get("io")?.emit("subscriptionUpdated");
+
+    res.status(200).json({ received: true });
+  } catch (error) {
+    console.error("PAYSTACK WEBHOOK ERROR:", error);
     res.status(500).json({ message: error.message });
   }
 };

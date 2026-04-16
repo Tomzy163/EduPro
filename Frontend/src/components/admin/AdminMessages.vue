@@ -5,7 +5,7 @@ import API from "@/services/api";
 
 const title = ref("");
 const content = ref("");
-const roleTarget = ref("student");
+const roleTarget = ref("all");
 const messages = ref([]);
 
 const fetchMessages = async () => {
@@ -45,10 +45,11 @@ const clearAll = async () => {
     <textarea v-model="content" class="input"></textarea>
 
     <select v-model="roleTarget" class="input">
+      <option value="all">All Users</option>
+      <option value="admin">Admins</option>
       <option value="student">Students</option>
       <option value="teacher">Teachers</option>
       <option value="parent">Parents</option>
-      <option value="all">All</option>
     </select>
 
     <button @click="send" class="btn success">Send</button>

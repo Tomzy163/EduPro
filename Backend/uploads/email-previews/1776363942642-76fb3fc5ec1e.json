@@ -1,0 +1,7 @@
+{
+  "to": "webhook.20260416192539@example.com",
+  "subject": "EduPro subscription activated",
+  "text": "Hello Webhook Admin, your Normal Plan plan is active until 16/05/2026.",
+  "htmlFile": "1776363942642-76fb3fc5ec1e.html",
+  "createdAt": "2026-04-16T18:25:42.646Z"
+}
