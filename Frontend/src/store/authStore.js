@@ -4,6 +4,8 @@ import router from "../router";
 import { connectSocket, disconnectSocket } from "../services/socket";
 import API from "../services/api";
 
+const LAST_SCHOOL_IDENTIFIER_KEY = "lastSchoolIdentifier";
+
 const getStoredUser = () => {
   try {
     const raw = sessionStorage.getItem("user");
@@ -19,6 +21,18 @@ const getStoredSchool = () => {
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
+  }
+};
+
+const persistLastSchoolIdentifier = (value) => {
+  try {
+    const normalized = String(value || "").trim();
+
+    if (normalized) {
+      localStorage.setItem(LAST_SCHOOL_IDENTIFIER_KEY, normalized);
+    }
+  } catch {
+    // Ignore storage errors.
   }
 };
 
@@ -42,6 +56,9 @@ export const useAuthStore = defineStore("auth", {
         sessionStorage.setItem("token", token);
         sessionStorage.setItem("user", JSON.stringify(user));
         sessionStorage.setItem("school", JSON.stringify(school || null));
+        persistLastSchoolIdentifier(
+          school?.code || user?.schoolCode || credentials?.school || school?.name
+        );
 
         connectSocket(user?._id || user?.id);
         return res.data;
@@ -92,11 +109,13 @@ export const useAuthStore = defineStore("auth", {
 
     updateSchool(school) {
       this.school = school || null;
+      persistLastSchoolIdentifier(school?.code || school?.name);
 
       if (this.user && school?.name) {
         this.user = {
           ...this.user,
           school: school.name,
+          schoolCode: school.code || this.user.schoolCode,
           subscription: school.subscription || this.user.subscription,
         };
         sessionStorage.setItem("user", JSON.stringify(this.user));
@@ -114,6 +133,7 @@ export const useAuthStore = defineStore("auth", {
         ...this.user,
         ...user,
         school: user.school?.name || this.user?.school,
+        schoolCode: user.school?.code || user.school?.schoolCode || this.user?.schoolCode,
       };
 
       if (user.school) {
@@ -122,6 +142,9 @@ export const useAuthStore = defineStore("auth", {
           ...user.school,
         };
         sessionStorage.setItem("school", JSON.stringify(this.school));
+        persistLastSchoolIdentifier(
+          user.school?.code || user.school?.schoolCode || user.school?.name
+        );
       }
 
       sessionStorage.setItem("user", JSON.stringify(this.user));

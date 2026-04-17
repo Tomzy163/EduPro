@@ -9,3 +9,8 @@ export const updateMySchool = async (data) => {
   const res = await API.put("/school", data);
   return res.data;
 };
+
+export const getDashboardSummary = async () => {
+  const res = await API.get("/school/dashboard-summary");
+  return res.data;
+};

@@ -1,7 +1,8 @@
 <script setup>
-  import Navbar from "@/components/Navbar.vue";
-  import ProfileManager from "@/components/ProfileManager.vue";
-  import AdminAnalytics from "@/components/AdminAnalytics.vue";
+import Navbar from "@/components/Navbar.vue";
+import ProfileManager from "@/components/ProfileManager.vue";
+import PlanFeatureGate from "@/components/PlanFeatureGate.vue";
+import AdminAnalytics from "@/components/AdminAnalytics.vue";
 import AdminSubscriptionCenter from "@/components/admin/AdminSubscriptionCenter.vue";
 import AdminSchoolSetup from "@/components/admin/AdminSchoolSetup.vue";
 import AdminMessages from "@/components/admin/AdminMessages.vue";
@@ -25,18 +26,66 @@ import AdminPayments from "@/components/admin/AdminPayments.vue";
       </div>
     </header>
 
-    <AdminAnalytics />
+    <PlanFeatureGate
+      feature="reporting_workflow"
+      title="School Analytics"
+      copy="Reporting and analytics unlock on the Supreme plan and above."
+    >
+      <AdminAnalytics />
+    </PlanFeatureGate>
     <ProfileManager />
     <AdminSubscriptionCenter />
 
     <section class="dashboard-sections">
-      <AdminSchoolSetup />
-      <AdminMessages />
-      <AdminUsers />
-      <AdminAssignments />
-      <AdminRelationships />
-      <AdminTimetable />
-      <AdminPayments />
+      <PlanFeatureGate
+        feature="course_setup"
+        title="School Setup"
+        copy="School setup, course management, and assignment tools are included from the Normal plan upward."
+      >
+        <AdminSchoolSetup />
+      </PlanFeatureGate>
+      <PlanFeatureGate
+        feature="priority_communication"
+        title="Announcements"
+        copy="Priority communication tools unlock on the Supreme plan and above."
+      >
+        <AdminMessages />
+      </PlanFeatureGate>
+      <PlanFeatureGate
+        feature="user_management"
+        title="User Management"
+        copy="Create and manage users on the Normal plan and above."
+      >
+        <AdminUsers />
+      </PlanFeatureGate>
+      <PlanFeatureGate
+        feature="course_setup"
+        title="Course Assignments"
+        copy="Course assignment workflows are included from the Normal plan upward."
+      >
+        <AdminAssignments />
+      </PlanFeatureGate>
+      <PlanFeatureGate
+        feature="high_volume_operations"
+        title="Parent And Child Linking"
+        copy="High-volume school operations unlock on the Gold plan and above."
+      >
+        <AdminRelationships />
+      </PlanFeatureGate>
+      <PlanFeatureGate
+        feature="timetable_setup"
+        title="Timetable Builder"
+        copy="Timetable setup is available on the Normal plan and above."
+      >
+        <AdminTimetable />
+      </PlanFeatureGate>
+      <PlanFeatureGate
+        feature="high_volume_operations"
+        title="Payment Oversight"
+        copy="Operational payment oversight unlocks on the Gold plan and above."
+      >
+        <AdminPayments />
+      </PlanFeatureGate>
     </section>
   </div>
 </template>

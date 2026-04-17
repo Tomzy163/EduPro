@@ -2,12 +2,16 @@ import express from "express";
 import Timetable from "../models/Timetable.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorize } from "../middleware/roleMiddleware.js";
-import { requireSchoolAccess } from "../middleware/subscriptionMiddleware.js";
+import {
+  requirePlanFeature,
+  requireSchoolAccess,
+} from "../middleware/subscriptionMiddleware.js";
 import { emitSchoolAdminUpdate } from "../utils/realtime.js";
 
 const router = express.Router();
 
 router.use(protect, requireSchoolAccess);
+router.use(requirePlanFeature("timetable_setup"));
 
 const buildTimetablePayload = (body, schoolId) => {
   const payload = {

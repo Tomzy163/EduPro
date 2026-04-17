@@ -8,11 +8,15 @@ import {
 } from "../controllers/resultController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorize } from "../middleware/roleMiddleware.js";
-import { requireSchoolAccess } from "../middleware/subscriptionMiddleware.js";
+import {
+  requirePlanFeature,
+  requireSchoolAccess,
+} from "../middleware/subscriptionMiddleware.js";
 
 const router = express.Router();
 
 router.use(protect, requireSchoolAccess);
+router.use(requirePlanFeature("result_tracking"));
 
 router.post("/", authorize("teacher", "admin"), uploadResult);
 router.put("/:id", authorize("teacher", "admin"), updateResult);

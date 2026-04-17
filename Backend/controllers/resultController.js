@@ -7,7 +7,10 @@ export const uploadResult = async (req, res) => {
   try {
     const { student, course, score, grade } = req.body;
 
-    const courseData = await Course.findById(course);
+    const courseData = await Course.findOne({
+      _id: course,
+      school: req.user.school._id,
+    });
 
     if (!courseData) {
       return res.status(404).json({ message: "Course not found" });
@@ -49,7 +52,10 @@ export const updateResult = async (req, res) => {
   try {
     const { score, grade } = req.body;
 
-    const result = await Result.findById(req.params.id).populate("course");
+    const result = await Result.findOne({
+      _id: req.params.id,
+      school: req.user.school._id,
+    }).populate("course");
 
     if (!result) {
       return res.status(404).json({ message: "Result not found" });
@@ -85,7 +91,10 @@ export const updateResult = async (req, res) => {
 
 export const deleteResult = async (req, res) => {
   try {
-    const result = await Result.findById(req.params.id).populate("course");
+    const result = await Result.findOne({
+      _id: req.params.id,
+      school: req.user.school._id,
+    }).populate("course");
 
     if (!result) {
       return res.status(404).json({ message: "Result not found" });

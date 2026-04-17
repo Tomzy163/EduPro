@@ -1,9 +1,10 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import API from "@/services/api";
+import { apiBaseUrl } from "@/services/runtimeConfig";
 
 const payments = ref([]);
-const uploadBaseUrl = "http://localhost:5000/";
+const uploadBaseUrl = `${apiBaseUrl.replace(/\/api$/, "")}/`;
 
 const fetchPayments = async () => {
   const res = await API.get("/payments");

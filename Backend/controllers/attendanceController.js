@@ -7,7 +7,10 @@ export const markAttendance = async (req, res) => {
   try {
     const { student, course, status } = req.body;
 
-    const courseData = await Course.findById(course);
+    const courseData = await Course.findOne({
+      _id: course,
+      school: req.user.school._id,
+    });
 
     if (!courseData) {
       return res.status(404).json({ message: "Course not found" });

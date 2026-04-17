@@ -8,6 +8,11 @@ import { SUBSCRIPTION_PLANS, getSubscriptionSnapshot } from "../utils/subscripti
 import { isMailerConfigured, sendPasswordResetEmail } from "../utils/mailer.js";
 import { sendSms } from "../utils/sms.js";
 import {
+  findSchoolByIdentifier,
+  generateUniqueSchoolCode,
+  resolveSchoolForLogin,
+} from "../utils/schoolDirectory.js";
+import {
   generatePaystackReference,
   initializePaystackTransaction,
   verifyPaystackSignature,
@@ -18,7 +23,6 @@ import {
   isValidSubscriptionPlan,
 } from "../utils/subscriptionActivation.js";
 
-const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const normalizePhoneNumber = (value = "") => String(value || "").trim();
 const SUBSCRIPTION_CURRENCY = process.env.PAYSTACK_CURRENCY || "NGN";
 const PAYSTACK_SUCCESS_STATUSES = new Set(["success", "successful"]);
@@ -27,7 +31,7 @@ const isPaystackConfigured = () => Boolean(process.env.PAYSTACK_SECRET_KEY);
 const resolveServerBaseUrl = () =>
   (process.env.SERVER_URL ||
     process.env.API_BASE_URL ||
-    `http://localhost:${process.env.PORT || 3000}`).replace(/\/+$/, "");
+    `http://localhost:${process.env.PORT || 5000}`).replace(/\/+$/, "");
 
 const normalizePlan = (value = "") => String(value || "").trim().toLowerCase();
 
@@ -102,6 +106,7 @@ const generateToken = (user) => {
 const buildSchoolPayload = (school) => ({
   _id: school._id,
   name: school.name,
+  code: school.schoolCode || "",
   bankName: school.bankName || "",
   accountName: school.accountName || "",
   accountNumber: school.accountNumber || "",
@@ -123,6 +128,7 @@ const buildAuthResponse = (user, school) => {
       role: user.role,
       school: school.name,
       schoolId: school._id,
+      schoolCode: school.schoolCode || "",
       subscription,
     },
     school: schoolPayload,
@@ -134,8 +140,9 @@ const buildAuthResponse = (user, school) => {
 export const register = async (req, res) => {
   try {
     const { name, email, phoneNumber, password, school: schoolName } = req.body;
+    const trimmedSchoolName = String(schoolName || "").trim();
 
-    if (!schoolName) {
+    if (!trimmedSchoolName) {
       return res.status(400).json({ message: "School is required" });
     }
 
@@ -143,9 +150,7 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: "Phone number is required" });
     }
 
-    let school = await School.findOne({
-      name: { $regex: `^${escapeRegex(schoolName.trim())}$`, $options: "i" },
-    });
+    let school = await findSchoolByIdentifier(trimmedSchoolName);
 
     if (school) {
       return res.status(400).json({
@@ -153,7 +158,10 @@ export const register = async (req, res) => {
       });
     }
 
-    school = await School.create({ name: schoolName.trim() });
+    school = await School.create({
+      name: trimmedSchoolName,
+      schoolCode: await generateUniqueSchoolCode(trimmedSchoolName),
+    });
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -178,22 +186,34 @@ export const register = async (req, res) => {
 
 export const loginUser = async (req, res) => {
   try {
-    const { email, password, school: schoolName } = req.body;
+    const { email, password, school: schoolIdentifier } = req.body;
+    const normalizedEmail = String(email || "").trim().toLowerCase();
 
-    if (!email || !password || !schoolName) {
-      return res.status(400).json({ message: "All fields are required" });
+    if (!normalizedEmail || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
     }
 
-    const school = await School.findOne({
-      name: { $regex: `^${escapeRegex(schoolName.trim())}$`, $options: "i" },
+    const schoolMatch = await resolveSchoolForLogin({
+      schoolIdentifier,
+      email: normalizedEmail,
     });
+    const school = schoolMatch.school;
 
     if (!school) {
-      return res.status(400).json({ message: "School not found" });
+      if (schoolMatch.needsSchoolIdentifier) {
+        return res.status(400).json({
+          message:
+            "Enter your school name or login code to sign in to the correct school account.",
+        });
+      }
+
+      return res.status(400).json({
+        message: "School not found. Use the school name or login code linked to this account.",
+      });
     }
 
     const user = await User.findOne({
-      email: email.toLowerCase(),
+      email: normalizedEmail,
       school: school._id,
     });
 
@@ -269,9 +289,7 @@ export const forgotPassword = async (req, res) => {
       });
     }
 
-    const schoolDoc = await School.findOne({
-      name: { $regex: `^${escapeRegex(school.trim())}$`, $options: "i" },
-    });
+    const schoolDoc = await findSchoolByIdentifier(school);
     if (!schoolDoc) return res.status(404).json({ message: "School not found" });
 
     const userQuery = {

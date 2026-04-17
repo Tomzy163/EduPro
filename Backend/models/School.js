@@ -1,12 +1,35 @@
 import mongoose from "mongoose";
+import {
+  normalizeSchoolAliases,
+  normalizeSchoolCode,
+  normalizeSchoolName,
+} from "../utils/schoolIdentity.js";
 
 const schoolSchema = new mongoose.Schema(
   {
     name: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
+    },
+    normalizedName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    schoolCode: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: "",
+    },
+    aliases: {
+      type: [String],
+      default: [],
+    },
+    aliasesNormalized: {
+      type: [String],
+      default: [],
     },
     currentPlan: {
       type: String,
@@ -62,7 +85,18 @@ const schoolSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+schoolSchema.pre("validate", function syncSchoolIdentity() {
+  this.name = String(this.name || "").trim().replace(/\s+/g, " ");
+  this.normalizedName = normalizeSchoolName(this.name);
+  this.schoolCode = normalizeSchoolCode(this.schoolCode);
+  this.aliases = normalizeSchoolAliases(this.aliases || [], this.name);
+  this.aliasesNormalized = this.aliases.map((alias) => normalizeSchoolName(alias));
+});
+
 schoolSchema.index({ currentPlan: 1, subscriptionStatus: 1 });
+schoolSchema.index({ normalizedName: 1 }, { unique: true, sparse: true });
+schoolSchema.index({ schoolCode: 1 }, { unique: true, sparse: true });
+schoolSchema.index({ aliasesNormalized: 1 });
 
 const School = mongoose.model("School", schoolSchema);
 

@@ -1,7 +1,9 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
-import connectDB from "./config/db.js";
+import http from "http";
+import { Server } from "socket.io";
+import connectDatabase from "./config/database.js";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import courseRoutes from "./routes/courseRoutes.js";
@@ -12,9 +14,10 @@ import paymentRoutes from "./routes/paymentRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import relationshipRoutes from "./routes/relationshipRoutes.js";
 import schoolRoutes from "./routes/schoolRoutes.js";
-import { Server } from "socket.io";
-// import { initSocket } from "./socket.js";
-import http from "http";
+import {
+  createDatabaseBackup,
+  stopDatabaseBackupInterval,
+} from "./utils/databaseBackup.js";
 import {
   registerSocketUser,
   setIo,
@@ -22,7 +25,6 @@ import {
 } from "./utils/socketState.js";
 
 dotenv.config();
-connectDB();
 
 const app = express();
 const clientOrigin = process.env.CLIENT_URL || "http://localhost:5173";
@@ -82,11 +84,9 @@ io.on("connection", (socket) => {
 app.get("/", (_req, res) => {
   res.send("API is running...");
 });
-// initSocket(server);
-
-// export { io, users };
 
 const PORT = process.env.PORT || 5000;
+let shutdownInProgress = false;
 
 server.on("error", (error) => {
   if (error.code === "EADDRINUSE") {
@@ -105,6 +105,51 @@ server.on("error", (error) => {
   process.exit(1);
 });
 
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT} with Socket.IO`);
+const shutdown = async (signal) => {
+  if (shutdownInProgress) {
+    return;
+  }
+
+  shutdownInProgress = true;
+  console.log(`${signal} received. Backing up database and shutting down.`);
+
+  try {
+    await createDatabaseBackup({
+      reason: `shutdown-${String(signal || "signal").toLowerCase()}`,
+    });
+  } catch (error) {
+    console.error("Failed to write the shutdown backup:", error.message);
+  } finally {
+    stopDatabaseBackupInterval();
+  }
+
+  server.close(() => {
+    process.exit(0);
+  });
+
+  setTimeout(() => {
+    process.exit(1);
+  }, 5000).unref();
+};
+
+const startServer = async () => {
+  try {
+    await connectDatabase();
+    server.listen(PORT, () => {
+      console.log(`Server running on port ${PORT} with Socket.IO`);
+    });
+  } catch (error) {
+    console.error("Unable to initialize the server:", error.message);
+    process.exit(1);
+  }
+};
+
+process.on("SIGINT", () => {
+  shutdown("SIGINT");
 });
+
+process.on("SIGTERM", () => {
+  shutdown("SIGTERM");
+});
+
+startServer();

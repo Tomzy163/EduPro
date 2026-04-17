@@ -17,7 +17,10 @@ import {
 
 import { protect } from "../middleware/authMiddleware.js";
 import { authorize } from "../middleware/roleMiddleware.js";
-import { requireSchoolAccess } from "../middleware/subscriptionMiddleware.js";
+import {
+  requirePlanFeature,
+  requireSchoolAccess,
+} from "../middleware/subscriptionMiddleware.js";
 
 const router = express.Router();
 
@@ -28,20 +31,20 @@ router.put("/profile", updateMyProfile);
 router.use(requireSchoolAccess);
 
 // ADMIN ONLY ROUTES
-router.get("/", authorize("admin"), getUsers);
-router.post("/", authorize("admin"), createUser);
-
-router.get("/:id", authorize("admin"), getUser);
-router.put("/:id", authorize("admin"), updateUser);
-router.delete("/:id", authorize("admin"), deleteUser);
+router.get("/", authorize("admin"), requirePlanFeature("user_management"), getUsers);
+router.post("/", authorize("admin"), requirePlanFeature("user_management"), createUser);
 
 // ADVANCED FEATURES
-router.post("/link-parent", authorize("admin"), linkParentToStudent);
-router.post("/assign-teacher", authorize("admin"), assignTeacher);
-router.post("/assign-course", authorize("admin"), assignStudent);
+router.post("/link-parent", authorize("admin"), requirePlanFeature("high_volume_operations"), linkParentToStudent);
+router.post("/assign-teacher", authorize("admin"), requirePlanFeature("course_setup"), assignTeacher);
+router.post("/assign-course", authorize("admin"), requirePlanFeature("course_setup"), assignStudent);
 
 // ANALYTICS
-router.get("/students-with-courses", authorize("admin"), getStudentsWithCourses);
-router.get("/teachers-with-courses", authorize("admin"), getTeachersWithCourses);
+router.get("/students-with-courses", authorize("admin"), requirePlanFeature("reporting_workflow"), getStudentsWithCourses);
+router.get("/teachers-with-courses", authorize("admin"), requirePlanFeature("reporting_workflow"), getTeachersWithCourses);
+
+router.get("/:id", authorize("admin"), requirePlanFeature("user_management"), getUser);
+router.put("/:id", authorize("admin"), requirePlanFeature("user_management"), updateUser);
+router.delete("/:id", authorize("admin"), requirePlanFeature("user_management"), deleteUser);
 
 export default router;

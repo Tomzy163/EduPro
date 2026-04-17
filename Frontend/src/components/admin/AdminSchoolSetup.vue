@@ -14,6 +14,7 @@ const auth = useAuthStore();
 const courses = ref([]);
 const users = ref([]);
 const schoolProfile = ref({
+  code: "",
   name: "",
   bankName: "",
   accountName: "",
@@ -53,6 +54,7 @@ const fetchData = async () => {
   courses.value = courseData;
   users.value = userData;
   schoolProfile.value = {
+    code: schoolData.school?.code || "",
     name: schoolData.school?.name || "",
     bankName: schoolData.school?.bankName || "",
     accountName: schoolData.school?.accountName || "",
@@ -80,6 +82,7 @@ const handleSaveSchoolProfile = async () => {
     });
 
     schoolProfile.value = {
+      code: response.school?.code || "",
       name: response.school?.name || "",
       bankName: response.school?.bankName || "",
       accountName: response.school?.accountName || "",
@@ -197,6 +200,9 @@ onMounted(fetchData);
       <h2 class="section-title">School Identity And Payment Account</h2>
       <p class="section-copy">
         Update the school name and the account details that students, parents, teachers, and admins can view for school-fee payments.
+      </p>
+      <p v-if="schoolProfile.code" class="identity-note">
+        Login code: <strong>{{ schoolProfile.code }}</strong>. Users can sign in with this code even after the school name changes.
       </p>
 
       <div class="form-grid">
@@ -363,6 +369,12 @@ onMounted(fetchData);
 .section-copy {
   margin: 6px 0 16px;
   color: var(--text-soft);
+}
+
+.identity-note {
+  margin: 0 0 16px;
+  color: #0f766e;
+  font-weight: 600;
 }
 
 .student-picker {

@@ -25,8 +25,79 @@ export const SUBSCRIPTION_PLANS = {
   },
 };
 
+export const PLAN_FEATURES = {
+  normal: [
+    "user_management",
+    "course_setup",
+    "timetable_setup",
+    "attendance_tracking",
+    "result_tracking",
+  ],
+  supreme: [
+    "user_management",
+    "course_setup",
+    "timetable_setup",
+    "attendance_tracking",
+    "result_tracking",
+    "priority_communication",
+    "reporting_workflow",
+  ],
+  gold: [
+    "user_management",
+    "course_setup",
+    "timetable_setup",
+    "attendance_tracking",
+    "result_tracking",
+    "priority_communication",
+    "reporting_workflow",
+    "high_volume_operations",
+    "advanced_monitoring",
+  ],
+  platinum: [
+    "user_management",
+    "course_setup",
+    "timetable_setup",
+    "attendance_tracking",
+    "result_tracking",
+    "priority_communication",
+    "reporting_workflow",
+    "high_volume_operations",
+    "advanced_monitoring",
+    "maximum_platform_access",
+  ],
+};
+
+export const FEATURE_LABELS = {
+  user_management: "user management",
+  course_setup: "course setup",
+  timetable_setup: "timetable setup",
+  attendance_tracking: "attendance tracking",
+  result_tracking: "result tracking",
+  priority_communication: "priority communication tools",
+  reporting_workflow: "better reporting workflow",
+  high_volume_operations: "high-volume school operations",
+  advanced_monitoring: "advanced monitoring",
+  maximum_platform_access: "maximum platform access",
+};
+
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const SUBSCRIPTION_DURATION_DAYS = 30;
+
+export const getPlanFeatures = (plan = "trial") => {
+  if (plan === "trial") {
+    return PLAN_FEATURES.platinum;
+  }
+
+  return PLAN_FEATURES[plan] || PLAN_FEATURES.normal;
+};
+
+export const getPlanForFeature = (feature) => {
+  const orderedPlans = ["normal", "supreme", "gold", "platinum"];
+  return orderedPlans.find((plan) => getPlanFeatures(plan).includes(feature)) || "platinum";
+};
+
+export const hasPlanFeature = (plan = "trial", feature = "") =>
+  getPlanFeatures(plan).includes(feature);
 
 const resolvePaidPlanExpiry = (school) => {
   if (school?.subscriptionEndsAt) {
@@ -64,8 +135,11 @@ export const getSubscriptionSnapshot = (school) => {
     status = "expired";
   }
 
+  const plan = school?.currentPlan || "trial";
+  const features = getPlanFeatures(plan);
+
   return {
-    plan: school?.currentPlan || "trial",
+    plan,
     status,
     trialStartedAt: school?.trialStartedAt || null,
     trialEndsAt: school?.trialEndsAt || null,
@@ -82,6 +156,8 @@ export const getSubscriptionSnapshot = (school) => {
       isPaidActive && paidPlanEndsAtMs
         ? Math.max(0, Math.ceil((paidPlanEndsAtMs - now) / DAY_IN_MS))
         : 0,
+    features,
+    featureAccess: Object.fromEntries(features.map((feature) => [feature, true])),
     availablePlans: Object.entries(SUBSCRIPTION_PLANS)
       .filter(([key]) => key !== "trial")
       .map(([key, value]) => ({

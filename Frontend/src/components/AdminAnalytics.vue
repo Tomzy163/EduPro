@@ -1,10 +1,8 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { onBeforeUnmount, onMounted, ref } from "vue";
 import Chart from "chart.js/auto";
-import { getUsers, getPayments } from "../services/analyticsService";
+import { getDashboardSummary } from "../services/schoolService";
 
-const users = ref([]);
-const payments = ref([]);
 const userChartRef = ref(null);
 const paymentChartRef = ref(null);
 
@@ -21,65 +19,67 @@ const stats = ref({
 
 onMounted(async () => {
   try {
-    users.value = await getUsers();
-    payments.value = await getPayments();
+    const summary = await getDashboardSummary();
+
+    stats.value.students = summary.users?.students || 0;
+    stats.value.teachers = summary.users?.teachers || 0;
+    stats.value.parents = summary.users?.parents || 0;
+    stats.value.totalPayments = summary.payments?.total || 0;
+    stats.value.revenue = Number(summary.revenue || 0);
+
+    if (userChart) userChart.destroy();
+    if (paymentChart) paymentChart.destroy();
+
+    userChart = new Chart(userChartRef.value, {
+      type: "bar",
+      data: {
+        labels: ["Students", "Teachers", "Parents"],
+        datasets: [
+          {
+            label: "Users",
+            data: [
+              stats.value.students,
+              stats.value.teachers,
+              stats.value.parents,
+            ],
+            backgroundColor: ["#0f766e", "#1d4ed8", "#f59e0b"],
+            borderRadius: 14,
+          },
+        ],
+      },
+      options: {
+        plugins: {
+          legend: {
+            display: false,
+          },
+        },
+      },
+    });
+
+    paymentChart = new Chart(paymentChartRef.value, {
+      type: "doughnut",
+      data: {
+        labels: ["Approved", "Pending", "Rejected"],
+        datasets: [
+          {
+            data: [
+              summary.payments?.approved || 0,
+              summary.payments?.pending || 0,
+              summary.payments?.rejected || 0,
+            ],
+            backgroundColor: ["#15803d", "#f59e0b", "#dc2626"],
+          },
+        ],
+      },
+    });
   } catch (error) {
     console.error("Failed to load admin analytics:", error);
   }
+});
 
-  stats.value.students = users.value.filter((user) => user.role === "student").length;
-  stats.value.teachers = users.value.filter((user) => user.role === "teacher").length;
-  stats.value.parents = users.value.filter((user) => user.role === "parent").length;
-  stats.value.totalPayments = payments.value.length;
-  stats.value.revenue = payments.value
-    .filter((payment) => payment.status === "approved")
-    .reduce((acc, payment) => acc + Number(payment.amount || 0), 0);
-
+onBeforeUnmount(() => {
   if (userChart) userChart.destroy();
   if (paymentChart) paymentChart.destroy();
-
-  userChart = new Chart(userChartRef.value, {
-    type: "bar",
-    data: {
-      labels: ["Students", "Teachers", "Parents"],
-      datasets: [
-        {
-          label: "Users",
-          data: [
-            stats.value.students,
-            stats.value.teachers,
-            stats.value.parents,
-          ],
-          backgroundColor: ["#0f766e", "#1d4ed8", "#f59e0b"],
-          borderRadius: 14,
-        },
-      ],
-    },
-    options: {
-      plugins: {
-        legend: {
-          display: false,
-        },
-      },
-    },
-  });
-
-  paymentChart = new Chart(paymentChartRef.value, {
-    type: "doughnut",
-    data: {
-      labels: ["Approved", "Pending", "Rejected"],
-      datasets: [
-        {
-          data: [
-            payments.value.filter((payment) => payment.status === "approved").length,
-            payments.value.filter((payment) => payment.status === "pending").length,
-            payments.value.filter((payment) => payment.status === "rejected").length,
-          ],
-          backgroundColor: ["#15803d", "#f59e0b", "#dc2626"],
-        },
-      ],
-    },
-  });
 });
 </script>
 

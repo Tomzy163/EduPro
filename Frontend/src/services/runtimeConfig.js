@@ -1,4 +1,4 @@
-const defaultApiBaseUrl = "http://localhost:3000/api";
+const defaultApiBaseUrl = "http://localhost:5000/api";
 
 export const apiBaseUrl = (
   import.meta.env.VITE_API_BASE_URL || defaultApiBaseUrl

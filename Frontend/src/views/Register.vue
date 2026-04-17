@@ -58,12 +58,26 @@ const handleRegister = async () => {
     const res = await register({
       name: name.value,
       email: email.value,
+      phoneNumber: phoneNumber.value,
       password: password.value,
       school: schoolName.value, // ✅ send school
       role: "admin", // For first admin
     });
 
     success.value = "Admin account created successfully 🎉";
+
+    try {
+      localStorage.setItem(
+        "lastSchoolIdentifier",
+        res?.school?.code || schoolName.value
+      );
+    } catch {
+      // Ignore storage errors.
+    }
+
+    success.value = res?.school?.code
+      ? `Admin account created successfully. Login code: ${res.school.code}`
+      : success.value;
 
     setTimeout(() => router.push("/"), 1500);
   } catch (err) {

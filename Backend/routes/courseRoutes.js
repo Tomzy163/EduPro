@@ -8,11 +8,15 @@ import {
 
 import { protect } from "../middleware/authMiddleware.js";
 import { authorize } from "../middleware/roleMiddleware.js";
-import { requireSchoolAccess } from "../middleware/subscriptionMiddleware.js";
+import {
+  requirePlanFeature,
+  requireSchoolAccess,
+} from "../middleware/subscriptionMiddleware.js";
 
 const router = express.Router();
 
 router.use(protect, requireSchoolAccess);
+router.use(requirePlanFeature("course_setup"));
 
 router.post("/", authorize("admin"), createCourse);
 router.get("/", getCourses);

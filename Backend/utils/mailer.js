@@ -35,7 +35,7 @@ const allowPreviewFallbackOnProviderFailure = () =>
 const getServerBaseUrl = () =>
   (process.env.SERVER_URL ||
     process.env.API_BASE_URL ||
-    `http://localhost:${process.env.PORT || 3000}`).replace(/\/+$/, "");
+    `http://localhost:${process.env.PORT || 5000}`).replace(/\/+$/, "");
 
 const getMailerCredentials = () => {
   const smtpUser = process.env.SMTP_USER || process.env.EMAIL_USER;

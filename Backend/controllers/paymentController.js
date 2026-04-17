@@ -40,10 +40,10 @@ export const getPayments = async (req, res) => {
 // APPROVE / REJECT
 export const updatePaymentStatus = async (req, res) => {
   try {
-    const payment = await Payment.findById(req.params.id).populate(
-      "user",
-      "name email phoneNumber"
-    );
+    const payment = await Payment.findOne({
+      _id: req.params.id,
+      school: req.user.school._id,
+    }).populate("user", "name email phoneNumber");
 
     if (!payment) {
       return res.status(404).json({ message: "Payment not found" });

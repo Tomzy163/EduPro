@@ -4,8 +4,6 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../store/authStore";
-import API from "../services/api";
-import socket, { connectSocket } from "@/socket";
 
 const email = ref("");
 const password = ref("");
@@ -15,13 +13,16 @@ const loading = ref(false);
 const error = ref("");
 const schoolName = ref("");
 
-const history = ref([]);
-const editId = ref(null);
-const editParent = ref("");
-const editStudent = ref("");
-
 const router = useRouter();
 const auth = useAuthStore();
+
+onMounted(() => {
+  try {
+    schoolName.value = localStorage.getItem("lastSchoolIdentifier") || "";
+  } catch {
+    schoolName.value = "";
+  }
+});
 
 const handleLogin = async () => {
   if (loading.value) return;
@@ -62,24 +63,6 @@ const handleLogin = async () => {
   }
 };
 
-// const adminExists = ref(true);
-
-// onMounted(async () => {
-//   try {
-//     const res = await fetch("http://localhost:5000/api/auth/admin-exists");
-//     const data = await res.json();
-//     adminExists.value = data.exists;
-//   } catch {
-//     adminExists.value = true;
-//   }
-// });
-// onMounted(async () => {
-//   const res = await API.get("/auth/admin-exists");
-
-//   if (!res.data.exists) {
-//     router.push("/register");
-//   }
-// });
 </script>
 <template>
   <div
@@ -110,10 +93,10 @@ const handleLogin = async () => {
 
       <!-- SCHOOL NAME -->
           <div class="mb-4">
-      <label class="block text-sm mb-1">School</label>
+      <label class="block text-sm mb-1">School Name Or Login Code</label>
       <input name="school"
         v-model="schoolName"
-        placeholder="Enter your school name"
+        placeholder="Enter your school name or code"
         class="input"
       />
     </div>
@@ -176,6 +159,7 @@ const handleLogin = async () => {
 /* DARK MODE */
 .login-page.dark {
   background: #0f172a;
+  height: 400px;
 }
 
 /* CARD */

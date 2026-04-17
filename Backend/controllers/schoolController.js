@@ -1,12 +1,18 @@
+import mongoose from "mongoose";
 import School from "../models/School.js";
+import User from "../models/User.js";
+import Payment from "../models/Payment.js";
 import { emitSchoolAdminUpdate } from "../utils/realtime.js";
 import { getSubscriptionSnapshot } from "../utils/subscription.js";
-
-const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+import {
+  appendSchoolAlias,
+  findSchoolByIdentifier,
+} from "../utils/schoolDirectory.js";
 
 const serializeSchool = (school) => ({
   _id: school._id,
   name: school.name,
+  code: school.schoolCode || "",
   bankName: school.bankName || "",
   accountName: school.accountName || "",
   accountNumber: school.accountNumber || "",
@@ -44,20 +50,22 @@ export const updateMySchool = async (req, res) => {
       return res.status(400).json({ message: "School name is required" });
     }
 
-    const existingSchool = await School.findOne({
-      _id: { $ne: school._id },
-      name: { $regex: `^${escapeRegex(nextName)}$`, $options: "i" },
-    });
+    const existingSchool = await findSchoolByIdentifier(nextName);
 
-    if (existingSchool) {
+    if (existingSchool && String(existingSchool._id) !== String(school._id)) {
       return res.status(400).json({ message: "Another school already uses this name" });
     }
 
+    const previousName = school.name;
     school.name = nextName;
     school.bankName = String(req.body.bankName || "").trim();
     school.accountName = String(req.body.accountName || "").trim();
     school.accountNumber = String(req.body.accountNumber || "").trim();
     school.paymentInstructions = String(req.body.paymentInstructions || "").trim();
+
+    if (previousName && previousName !== nextName) {
+      appendSchoolAlias(school, previousName);
+    }
 
     await school.save();
 
@@ -71,6 +79,64 @@ export const updateMySchool = async (req, res) => {
       entity: "school",
       action: "updated",
       message: "Admin updated school profile details.",
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getDashboardSummary = async (req, res) => {
+  try {
+    const schoolId = new mongoose.Types.ObjectId(
+      String(req.user.school?._id || req.user.school)
+    );
+
+    const [userCounts, paymentCounts, revenue] = await Promise.all([
+      User.aggregate([
+        { $match: { school: schoolId } },
+        { $group: { _id: "$role", count: { $sum: 1 } } },
+      ]),
+      Payment.aggregate([
+        { $match: { school: schoolId } },
+        { $group: { _id: "$status", count: { $sum: 1 } } },
+      ]),
+      Payment.aggregate([
+        {
+          $match: {
+            school: schoolId,
+            status: "approved",
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: { $toDouble: "$amount" } },
+          },
+        },
+      ]),
+    ]);
+
+    const usersByRole = Object.fromEntries(
+      userCounts.map((entry) => [entry._id, entry.count])
+    );
+    const paymentsByStatus = Object.fromEntries(
+      paymentCounts.map((entry) => [entry._id, entry.count])
+    );
+
+    res.json({
+      users: {
+        students: usersByRole.student || 0,
+        teachers: usersByRole.teacher || 0,
+        parents: usersByRole.parent || 0,
+        admins: usersByRole.admin || 0,
+      },
+      payments: {
+        approved: paymentsByStatus.approved || 0,
+        pending: paymentsByStatus.pending || 0,
+        rejected: paymentsByStatus.rejected || 0,
+        total: Object.values(paymentsByStatus).reduce((sum, count) => sum + count, 0),
+      },
+      revenue: Number(revenue[0]?.total || 0),
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
