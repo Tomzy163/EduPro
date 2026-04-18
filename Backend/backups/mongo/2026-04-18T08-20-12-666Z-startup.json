@@ -1,13 +1,13 @@
 {
   "meta": {
-    "reason": "interval",
-    "timestamp": "2026-04-18T08:35:12.714Z",
+    "reason": "startup",
+    "timestamp": "2026-04-18T08:20:12.666Z",
     "database": "prj001",
     "host": "localhost"
   },
   "counts": {
-    "schools": 2,
-    "users": 8,
+    "schools": 1,
+    "users": 7,
     "courses": 5,
     "timetables": 2,
     "attendances": 0,
@@ -43,28 +43,6 @@
         "createdAt": "2026-04-17T10:26:19.834Z",
         "updatedAt": "2026-04-17T12:21:14.909Z",
         "__v": 1
-      },
-      {
-        "_id": "69e33f9726b8a35ee3d8097a",
-        "name": "savage school",
-        "normalizedName": "savage school",
-        "schoolCode": "SS-1584",
-        "aliases": [],
-        "aliasesNormalized": [],
-        "currentPlan": "trial",
-        "subscriptionStatus": "trial",
-        "subscriptionStartedAt": null,
-        "subscriptionEndsAt": null,
-        "subscribedAt": null,
-        "bankName": "",
-        "accountName": "",
-        "accountNumber": "",
-        "paymentInstructions": "",
-        "trialStartedAt": "2026-04-18T08:23:51.673Z",
-        "trialEndsAt": "2026-05-18T08:23:51.673Z",
-        "createdAt": "2026-04-18T08:23:51.677Z",
-        "updatedAt": "2026-04-18T08:23:51.677Z",
-        "__v": 0
       }
     ],
     "users": [
@@ -188,21 +166,6 @@
         "children": [],
         "createdAt": "2026-04-17T17:38:54.599Z",
         "updatedAt": "2026-04-17T17:38:54.599Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e33f9726b8a35ee3d8097c",
-        "school": "69e33f9726b8a35ee3d8097a",
-        "name": "excel",
-        "email": "tomzy001@yahoo.com",
-        "phoneNumber": "09163663404",
-        "password": "$2b$10$PvhX94Zu4Gmk.krVg63mieMTOtAdwZsPN2jp5R0d7k2Z0kj0NzyXm",
-        "role": "admin",
-        "parents": [],
-        "courses": [],
-        "children": [],
-        "createdAt": "2026-04-18T08:23:51.776Z",
-        "updatedAt": "2026-04-18T08:23:51.776Z",
         "__v": 0
       }
     ],
