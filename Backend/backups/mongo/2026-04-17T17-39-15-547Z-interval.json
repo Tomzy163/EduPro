@@ -1,7 +1,7 @@
 {
   "meta": {
     "reason": "interval",
-    "timestamp": "2026-04-17T19:27:49.515Z",
+    "timestamp": "2026-04-17T17:39:15.547Z",
     "database": "prj001",
     "host": "localhost"
   },
@@ -58,10 +58,8 @@
         "courses": [],
         "children": [],
         "createdAt": "2026-04-17T10:26:20.192Z",
-        "updatedAt": "2026-04-17T17:44:50.944Z",
-        "__v": 0,
-        "resetToken": "2c03205357f91cfe458179cdfe0a58b189a03e8421f8eb5ae450336d78c33aeb",
-        "resetTokenExpire": "2026-04-17T17:59:50.943Z"
+        "updatedAt": "2026-04-17T10:26:20.192Z",
+        "__v": 0
       },
       {
         "_id": "69e20c7942be74f1d7b49647",

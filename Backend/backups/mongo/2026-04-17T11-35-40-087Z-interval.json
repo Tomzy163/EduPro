@@ -1,0 +1,452 @@
+{
+  "meta": {
+    "reason": "interval",
+    "timestamp": "2026-04-17T11:35:40.087Z",
+    "database": "prj001",
+    "host": "localhost"
+  },
+  "counts": {
+    "schools": 2,
+    "users": 18,
+    "courses": 5,
+    "timetables": 2,
+    "attendances": 0,
+    "results": 0,
+    "payments": 3,
+    "messages": 0,
+    "parentStudentLinks": 0
+  },
+  "data": {
+    "schools": [
+      {
+        "_id": "69d03028f8962939d54521db",
+        "name": "anna school",
+        "__v": 1,
+        "accountName": "",
+        "accountNumber": "",
+        "aliases": [],
+        "aliasesNormalized": [],
+        "bankName": "",
+        "currentPlan": "trial",
+        "normalizedName": "anna school",
+        "paymentInstructions": "",
+        "schoolCode": "AS-9F62",
+        "subscriptionStatus": "trial",
+        "trialEndsAt": "2026-05-17T10:20:39.900Z",
+        "trialStartedAt": "2026-04-17T10:20:39.900Z",
+        "updatedAt": "2026-04-17T10:20:39.930Z"
+      },
+      {
+        "_id": "69e20acb42be74f1d7b495b4",
+        "name": "prince days school",
+        "normalizedName": "prince days school",
+        "schoolCode": "PWS-5EB6",
+        "aliases": [
+          "prince will school"
+        ],
+        "aliasesNormalized": [
+          "prince will school"
+        ],
+        "currentPlan": "trial",
+        "subscriptionStatus": "trial",
+        "subscriptionStartedAt": null,
+        "subscriptionEndsAt": null,
+        "subscribedAt": null,
+        "bankName": "Opay Bank",
+        "accountName": "Disu Ezekiel",
+        "accountNumber": "9163663404",
+        "paymentInstructions": "School Fee",
+        "trialStartedAt": "2026-04-17T10:26:19.831Z",
+        "trialEndsAt": "2026-05-17T10:26:19.831Z",
+        "createdAt": "2026-04-17T10:26:19.834Z",
+        "updatedAt": "2026-04-17T11:34:34.296Z",
+        "__v": 1
+      }
+    ],
+    "users": [
+      {
+        "_id": "69d03029f8962939d54521dd",
+        "school": "69d03028f8962939d54521db",
+        "name": "anna",
+        "email": "anna@school.com",
+        "password": "$2b$10$.ToUVAoWrxiLtqPTlyODVO1HMQsLyN5lD5jTYpf96P.Js5.IG7zNm",
+        "role": "admin",
+        "courses": [],
+        "children": [],
+        "createdAt": "2026-04-03T21:24:57.062Z",
+        "updatedAt": "2026-04-03T21:24:57.062Z",
+        "__v": 0
+      },
+      {
+        "_id": "69d030d2f8962939d54521f8",
+        "school": "69d03028f8962939d54521db",
+        "name": "den",
+        "email": "den@school.com",
+        "password": "$2b$10$nOnZOU6LBncLtP8YGQGI8uCuJcubNL7PbwY8JW6KTfkMPZPYvI6/i",
+        "role": "teacher",
+        "courses": [],
+        "children": [],
+        "createdAt": "2026-04-03T21:27:46.363Z",
+        "updatedAt": "2026-04-03T21:27:46.363Z",
+        "__v": 0
+      },
+      {
+        "_id": "69d030fef8962939d5452203",
+        "school": "69d03028f8962939d54521db",
+        "name": "jacob",
+        "email": "jacob@school.com",
+        "password": "$2b$10$XZ.py43igti.AxNA/UUipeoy73QX.A0soob56R/5oSfcNbmpzbi8K",
+        "role": "student",
+        "courses": [
+          "69d031b7f8962939d545220d",
+          "69d031b7f8962939d545220d",
+          "69d0c97faebf9bc359a53ca2",
+          "69d0c97faebf9bc359a53ca2"
+        ],
+        "children": [],
+        "createdAt": "2026-04-03T21:28:30.246Z",
+        "updatedAt": "2026-04-07T21:37:37.542Z",
+        "__v": 4
+      },
+      {
+        "_id": "69d0c937aebf9bc359a53c89",
+        "school": "69d03028f8962939d54521db",
+        "name": "david",
+        "email": "david@school.com",
+        "password": "$2b$10$/mU4g89nahiFYDboj5JiguPRRL.601iEL4qThRvL8xEhpTWx1rWXi",
+        "role": "student",
+        "courses": [
+          "69d031b7f8962939d545220d",
+          "69d0c97faebf9bc359a53ca2"
+        ],
+        "children": [],
+        "createdAt": "2026-04-04T08:17:59.539Z",
+        "updatedAt": "2026-04-04T09:35:02.465Z",
+        "__v": 2
+      },
+      {
+        "_id": "69d0c96caebf9bc359a53c96",
+        "school": "69d03028f8962939d54521db",
+        "name": "eli",
+        "email": "eli@school.com",
+        "password": "$2b$10$HMmvD/7kmb8Vk5LUCWSrfuWIj.7tQCsaFC/8oMIKj3dsPJn.YcZLW",
+        "role": "teacher",
+        "courses": [],
+        "children": [],
+        "createdAt": "2026-04-04T08:18:52.875Z",
+        "updatedAt": "2026-04-04T08:18:52.875Z",
+        "__v": 0
+      },
+      {
+        "_id": "69d0d9c2923eb59965b8028a",
+        "school": "69d03028f8962939d54521db",
+        "name": "dell",
+        "email": "dell@school.com",
+        "password": "$2b$10$6Qo845uhC8yUNbDqKl6TNOTqRFDTcjrFRwsTxJQ60GxA7FGzCxSYy",
+        "role": "teacher",
+        "courses": [],
+        "children": [],
+        "createdAt": "2026-04-04T09:28:34.074Z",
+        "updatedAt": "2026-04-04T09:28:34.074Z",
+        "__v": 0
+      },
+      {
+        "_id": "69d0dc9f923eb59965b80385",
+        "school": "69d03028f8962939d54521db",
+        "name": "cain",
+        "email": "cain@school.com",
+        "password": "$2b$10$D916XWZl7JKpdUsrmhpmROYDKV1iwNfkXQEiMKBk0f2PdEvglKqMy",
+        "role": "student",
+        "courses": [],
+        "children": [],
+        "createdAt": "2026-04-04T09:40:47.074Z",
+        "updatedAt": "2026-04-04T09:40:47.074Z",
+        "__v": 0
+      },
+      {
+        "_id": "69d0dcca923eb59965b80392",
+        "school": "69d03028f8962939d54521db",
+        "name": "sam",
+        "email": "sam@school.com",
+        "password": "$2b$10$bzM3I438xFUyKvMLAM9YMug5hch6hm34jy0g.o9VkzgXeRjJgbfLe",
+        "role": "student",
+        "courses": [],
+        "children": [],
+        "createdAt": "2026-04-04T09:41:30.746Z",
+        "updatedAt": "2026-04-04T09:41:30.746Z",
+        "__v": 0
+      },
+      {
+        "_id": "69d0ea3b923eb59965b80471",
+        "school": "69d03028f8962939d54521db",
+        "name": "iTunes",
+        "email": "it@school.com",
+        "password": "$2b$10$aOziAjpZIbS/t2IIXHj8NOyl78K5ezVduW913g.I3BVhwN/L9qqUC",
+        "role": "teacher",
+        "courses": [],
+        "children": [],
+        "createdAt": "2026-04-04T10:38:51.441Z",
+        "updatedAt": "2026-04-04T10:38:51.441Z",
+        "__v": 0
+      },
+      {
+        "_id": "69d42299c1dbef789081d5da",
+        "school": "69d03028f8962939d54521db",
+        "name": "Ayo",
+        "email": "ayo@school.com",
+        "password": "$2b$10$9YxAaCrqU8q439S.p9JZBO7DxPFg9ZmONUPTVClwqqK.DbBRWxnT2",
+        "role": "parent",
+        "courses": [],
+        "children": [],
+        "createdAt": "2026-04-06T21:16:09.547Z",
+        "updatedAt": "2026-04-07T21:37:37.538Z",
+        "__v": 3
+      },
+      {
+        "_id": "69d576cc6f3bb11718755b7c",
+        "school": "69d03028f8962939d54521db",
+        "name": "john",
+        "email": "john@school.com",
+        "password": "$2b$10$Mgf/yzfhSl1ZR/Mg/REnPuFmHP6pvLJQjZRtjRTi.bcjWRQ1vKCGC",
+        "role": "parent",
+        "courses": [],
+        "children": [],
+        "createdAt": "2026-04-07T21:27:40.945Z",
+        "updatedAt": "2026-04-07T21:37:25.620Z",
+        "__v": 2
+      },
+      {
+        "_id": "69d57e98ed8440b576e89735",
+        "school": "69d03028f8962939d54521db",
+        "name": "joe",
+        "email": "joe@school.com",
+        "password": "$2b$10$tSQ4BqXwo/hiZoLbfdSLYu6.wArnWIgW9sSCm3SPm9kKH58L4bfr.",
+        "role": "teacher",
+        "courses": [],
+        "children": [],
+        "createdAt": "2026-04-07T22:00:56.883Z",
+        "updatedAt": "2026-04-07T22:00:56.883Z",
+        "__v": 0
+      },
+      {
+        "_id": "69e20acc42be74f1d7b495b6",
+        "school": "69e20acb42be74f1d7b495b4",
+        "name": "excel",
+        "email": "disuezekiel@yahoo.com",
+        "phoneNumber": "09163663404",
+        "password": "$2b$10$gbqi5p3xefvBXimeYqIbpO/MyzH46TjNU9NfwDr7Gj92/uKSAUVxC",
+        "role": "admin",
+        "parents": [],
+        "courses": [],
+        "children": [],
+        "createdAt": "2026-04-17T10:26:20.192Z",
+        "updatedAt": "2026-04-17T10:26:20.192Z",
+        "__v": 0
+      },
+      {
+        "_id": "69e20bff42be74f1d7b49620",
+        "school": "69e20acb42be74f1d7b495b4",
+        "name": "Favour",
+        "email": "favour@school.com",
+        "phoneNumber": "09163663404",
+        "password": "$2b$10$6AUp9cpXARjiD86bUyPST.me6yMV5ZMUwRImPygtn8H0hmq9f.tNK",
+        "role": "teacher",
+        "parents": [],
+        "courses": [
+          "69e20d8042be74f1d7b496b3"
+        ],
+        "children": [],
+        "createdAt": "2026-04-17T10:31:27.660Z",
+        "updatedAt": "2026-04-17T10:38:04.050Z",
+        "__v": 1
+      },
+      {
+        "_id": "69e20c7942be74f1d7b49647",
+        "school": "69e20acb42be74f1d7b495b4",
+        "name": "Main",
+        "email": "main@school.com",
+        "phoneNumber": "09153259898",
+        "password": "$2b$10$cW4X52q/8VoXQF3jAvNOr.LP.VAsOIf/UdhgUIn8AgwgQ0gQlmY8C",
+        "role": "student",
+        "parents": [],
+        "courses": [
+          "69e20d8042be74f1d7b496b3"
+        ],
+        "children": [],
+        "createdAt": "2026-04-17T10:33:29.764Z",
+        "updatedAt": "2026-04-17T10:38:15.120Z",
+        "__v": 1
+      },
+      {
+        "_id": "69e20d3642be74f1d7b49683",
+        "school": "69e20acb42be74f1d7b495b4",
+        "name": "flex",
+        "email": "flex@school.com",
+        "phoneNumber": "09082667676",
+        "password": "$2b$10$NJv1bjx9qCoBwnypAbqDMekQ0l8GiOdYuskzozlhLGj84pHWPdCSq",
+        "role": "parent",
+        "parents": [],
+        "courses": [],
+        "children": [],
+        "createdAt": "2026-04-17T10:36:38.886Z",
+        "updatedAt": "2026-04-17T10:36:38.886Z",
+        "__v": 0
+      },
+      {
+        "_id": "69e20ddb42be74f1d7b49744",
+        "school": "69e20acb42be74f1d7b495b4",
+        "name": "DIVINE",
+        "email": "ezekieldisu@gmail.com",
+        "phoneNumber": "09163663404",
+        "password": "$2b$10$TL4kz5eHKXR4V5Y2oFjdue5/OmCEq/fvT5W9wzbQDMWegPfM1H2PK",
+        "role": "teacher",
+        "parents": [],
+        "courses": [],
+        "children": [],
+        "createdAt": "2026-04-17T10:39:23.448Z",
+        "updatedAt": "2026-04-17T10:39:23.448Z",
+        "__v": 0
+      },
+      {
+        "_id": "69e20dfa42be74f1d7b49767",
+        "school": "69e20acb42be74f1d7b495b4",
+        "name": "bale",
+        "email": "bale@school.com",
+        "phoneNumber": "09163663478",
+        "password": "$2b$10$bJ0tDAzf6mgw2kvsr1nKFuqlZ38jQRO5ANStJ8jYyNnO0lfkynhie",
+        "role": "student",
+        "parents": [],
+        "courses": [],
+        "children": [],
+        "createdAt": "2026-04-17T10:39:54.659Z",
+        "updatedAt": "2026-04-17T10:39:54.659Z",
+        "__v": 0
+      }
+    ],
+    "courses": [
+      {
+        "_id": "69d031b7f8962939d545220d",
+        "school": "69d03028f8962939d54521db",
+        "name": "English",
+        "students": [
+          "69d030fef8962939d5452203",
+          "69d030fef8962939d5452203",
+          "69d0c937aebf9bc359a53c89",
+          "69d030fef8962939d5452203"
+        ],
+        "term": "First Term",
+        "createdAt": "2026-04-03T21:31:35.214Z",
+        "updatedAt": "2026-04-07T22:00:15.379Z",
+        "__v": 4,
+        "teacher": "69d0d9c2923eb59965b8028a"
+      },
+      {
+        "_id": "69d0c97faebf9bc359a53ca2",
+        "school": "69d03028f8962939d54521db",
+        "name": "Biology",
+        "students": [
+          "69d030fef8962939d5452203",
+          "69d0c937aebf9bc359a53c89",
+          "69d030fef8962939d5452203"
+        ],
+        "term": "First Term",
+        "createdAt": "2026-04-04T08:19:11.100Z",
+        "updatedAt": "2026-04-07T21:59:59.729Z",
+        "__v": 3,
+        "teacher": "69d0c96caebf9bc359a53c96"
+      },
+      {
+        "_id": "69d0eabe923eb59965b80493",
+        "school": "69d03028f8962939d54521db",
+        "name": "Geography",
+        "students": [],
+        "term": "First Term",
+        "createdAt": "2026-04-04T10:41:02.372Z",
+        "updatedAt": "2026-04-04T10:41:02.372Z",
+        "__v": 0
+      },
+      {
+        "_id": "69d39bb3c1dbef789081d153",
+        "school": "69d03028f8962939d54521db",
+        "name": "Mathematics",
+        "students": [],
+        "term": "First Term",
+        "createdAt": "2026-04-06T11:40:35.567Z",
+        "updatedAt": "2026-04-06T11:40:35.567Z",
+        "__v": 0
+      },
+      {
+        "_id": "69e20d8042be74f1d7b496b3",
+        "school": "69e20acb42be74f1d7b495b4",
+        "name": "Mathematics",
+        "students": [
+          "69e20c7942be74f1d7b49647"
+        ],
+        "term": "First Term",
+        "createdAt": "2026-04-17T10:37:52.875Z",
+        "updatedAt": "2026-04-17T10:38:15.124Z",
+        "__v": 1,
+        "teacher": "69e20bff42be74f1d7b49620"
+      }
+    ],
+    "timetables": [
+      {
+        "_id": "69d031f7f8962939d545222e",
+        "course": "69d031b7f8962939d545220d",
+        "teacher": "69d030d2f8962939d54521f8",
+        "student": "69d030fef8962939d5452203",
+        "day": "Monday",
+        "time": "08:00am-09:00am",
+        "__v": 0
+      },
+      {
+        "_id": "69d0db99923eb59965b8030f",
+        "course": "69d031b7f8962939d545220d",
+        "teacher": "69d0d9c2923eb59965b8028a",
+        "student": null,
+        "day": "Monday",
+        "time": "09:00am-10:00am",
+        "__v": 0
+      }
+    ],
+    "attendances": [],
+    "results": [],
+    "payments": [
+      {
+        "_id": "69d0dbe7923eb59965b80323",
+        "school": "69d03028f8962939d54521db",
+        "user": "69d0d9ee923eb59965b80297",
+        "amount": 70000,
+        "receipt": "uploads\\receipts\\1775295463839-receipt=@receipt.png",
+        "status": "pending",
+        "createdAt": "2026-04-04T09:37:43.863Z",
+        "updatedAt": "2026-04-04T09:37:43.863Z",
+        "__v": 0
+      },
+      {
+        "_id": "69d0dc06923eb59965b8033e",
+        "school": "69d03028f8962939d54521db",
+        "user": "69d0d9ee923eb59965b80297",
+        "amount": 75000,
+        "receipt": "uploads\\receipts\\1775295493998-receipt=@receipt.png",
+        "status": "approved",
+        "createdAt": "2026-04-04T09:38:14.009Z",
+        "updatedAt": "2026-04-04T15:05:57.699Z",
+        "__v": 0
+      },
+      {
+        "_id": "69d0dc1b923eb59965b80342",
+        "school": "69d03028f8962939d54521db",
+        "user": "69d0d9ee923eb59965b80297",
+        "amount": 5000,
+        "receipt": "uploads\\receipts\\1775295515872-receipt=@receipt.png",
+        "status": "rejected",
+        "createdAt": "2026-04-04T09:38:35.880Z",
+        "updatedAt": "2026-04-04T15:05:55.941Z",
+        "__v": 0
+      }
+    ],
+    "messages": [],
+    "parentStudentLinks": []
+  }
+}

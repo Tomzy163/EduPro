@@ -1,13 +1,13 @@
 {
   "meta": {
     "reason": "interval",
-    "timestamp": "2026-04-17T19:27:49.515Z",
+    "timestamp": "2026-04-17T14:53:10.778Z",
     "database": "prj001",
     "host": "localhost"
   },
   "counts": {
     "schools": 1,
-    "users": 7,
+    "users": 6,
     "courses": 5,
     "timetables": 2,
     "attendances": 0,
@@ -58,10 +58,23 @@
         "courses": [],
         "children": [],
         "createdAt": "2026-04-17T10:26:20.192Z",
-        "updatedAt": "2026-04-17T17:44:50.944Z",
-        "__v": 0,
-        "resetToken": "2c03205357f91cfe458179cdfe0a58b189a03e8421f8eb5ae450336d78c33aeb",
-        "resetTokenExpire": "2026-04-17T17:59:50.943Z"
+        "updatedAt": "2026-04-17T10:26:20.192Z",
+        "__v": 0
+      },
+      {
+        "_id": "69e20bff42be74f1d7b49620",
+        "school": "69e20acb42be74f1d7b495b4",
+        "name": "Favour",
+        "email": "favour@school.com",
+        "phoneNumber": "09163663404",
+        "password": "$2b$10$6AUp9cpXARjiD86bUyPST.me6yMV5ZMUwRImPygtn8H0hmq9f.tNK",
+        "role": "teacher",
+        "parents": [],
+        "courses": [],
+        "children": [],
+        "createdAt": "2026-04-17T10:31:27.660Z",
+        "updatedAt": "2026-04-17T11:46:47.468Z",
+        "__v": 1
       },
       {
         "_id": "69e20c7942be74f1d7b49647",
@@ -137,36 +150,6 @@
         "updatedAt": "2026-04-17T11:50:23.311Z",
         "__v": 1,
         "parent": "69e20d3642be74f1d7b49683"
-      },
-      {
-        "_id": "69e26ea3a4603827f8cabd99",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "deborah",
-        "email": "deborah@school.com",
-        "phoneNumber": "08160837726",
-        "password": "$2b$10$89II2Tnw.wjskFu8R4ABUOLlVUKpehANH6vWgTqEhw.gER0OqmtFi",
-        "role": "student",
-        "parents": [],
-        "courses": [],
-        "children": [],
-        "createdAt": "2026-04-17T17:32:19.468Z",
-        "updatedAt": "2026-04-17T17:32:19.468Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e2702ea4603827f8cabe83",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "Favour",
-        "email": "favour@school.com",
-        "phoneNumber": "09163663404",
-        "password": "$2b$10$SWu6KoRTFacpodXCDa885Of24P3jatCfXpdbqTk6XPZeeZOo5KieK",
-        "role": "teacher",
-        "parents": [],
-        "courses": [],
-        "children": [],
-        "createdAt": "2026-04-17T17:38:54.599Z",
-        "updatedAt": "2026-04-17T17:38:54.599Z",
-        "__v": 0
       }
     ],
     "courses": [

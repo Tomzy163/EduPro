@@ -1,0 +1,7 @@
+{
+  "to": "disuezekiel@yahoo.com",
+  "subject": "EduPro password reset",
+  "text": "Hello excel,\n\nUse the link below to reset your password:\nhttp://localhost:5173/reset-password?token=2c03205357f91cfe458179cdfe0a58b189a03e8421f8eb5ae450336d78c33aeb\n\nThis link expires in 15 minutes.",
+  "htmlFile": "1776447890963-7a7aea128969.html",
+  "createdAt": "2026-04-17T17:44:50.964Z"
+}
