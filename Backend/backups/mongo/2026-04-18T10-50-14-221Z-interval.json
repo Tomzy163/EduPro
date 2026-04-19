@@ -1,14 +1,14 @@
 {
   "meta": {
     "reason": "interval",
-    "timestamp": "2026-04-19T07:19:10.737Z",
+    "timestamp": "2026-04-18T10:50:14.221Z",
     "database": "prj001",
     "host": "localhost"
   },
   "counts": {
     "schools": 2,
-    "users": 11,
-    "courses": 10,
+    "users": 8,
+    "courses": 5,
     "timetables": 2,
     "attendances": 0,
     "results": 0,
@@ -204,51 +204,6 @@
         "createdAt": "2026-04-18T08:23:51.776Z",
         "updatedAt": "2026-04-18T08:23:51.776Z",
         "__v": 0
-      },
-      {
-        "_id": "69e47d1826b8a35ee3d80e6c",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "kelvin",
-        "email": "kelvin@school.com",
-        "phoneNumber": "0815820085",
-        "password": "$2b$10$rtfof8H2zeTQFj0RMQoGv.bnWbWmmBngUPdpaSgGOoeCwdhmIGThq",
-        "role": "student",
-        "parents": [],
-        "courses": [],
-        "children": [],
-        "createdAt": "2026-04-19T06:58:32.280Z",
-        "updatedAt": "2026-04-19T06:58:32.280Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e47d6a26b8a35ee3d80eaf",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "malvin",
-        "email": "malvin@school.com",
-        "phoneNumber": "09023456722",
-        "password": "$2b$10$Ku2CfV/PUIxTQ5fJCB8htevhV9x62FHAEWaqaiR8W8RmE1PqZLvAC",
-        "role": "student",
-        "parents": [],
-        "courses": [],
-        "children": [],
-        "createdAt": "2026-04-19T06:59:54.259Z",
-        "updatedAt": "2026-04-19T06:59:54.259Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e47ddb26b8a35ee3d80f30",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "Dapo",
-        "email": "dapo@school.com",
-        "phoneNumber": "09122334455",
-        "password": "$2b$10$owTpidwCHtFSF31cPrGhRuArqTPHtBYDWxwANq8Bng/jKHA.LdWHe",
-        "role": "parent",
-        "parents": [],
-        "courses": [],
-        "children": [],
-        "createdAt": "2026-04-19T07:01:47.842Z",
-        "updatedAt": "2026-04-19T07:01:47.842Z",
-        "__v": 0
       }
     ],
     "courses": [
@@ -316,56 +271,6 @@
         "updatedAt": "2026-04-17T11:46:58.237Z",
         "__v": 2,
         "teacher": "69e20ddb42be74f1d7b49744"
-      },
-      {
-        "_id": "69e47c4926b8a35ee3d80cf9",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "English",
-        "students": [],
-        "term": "First Term",
-        "createdAt": "2026-04-19T06:55:05.529Z",
-        "updatedAt": "2026-04-19T06:55:05.529Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e47c5c26b8a35ee3d80d43",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "Biology",
-        "students": [],
-        "term": "First Term",
-        "createdAt": "2026-04-19T06:55:24.697Z",
-        "updatedAt": "2026-04-19T06:55:24.697Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e47c6826b8a35ee3d80d8d",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "Chemistry",
-        "students": [],
-        "term": "First Term",
-        "createdAt": "2026-04-19T06:55:36.077Z",
-        "updatedAt": "2026-04-19T06:55:36.077Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e47c9026b8a35ee3d80dd7",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "Physics",
-        "students": [],
-        "term": "First Term",
-        "createdAt": "2026-04-19T06:56:16.769Z",
-        "updatedAt": "2026-04-19T06:56:16.769Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e47cb926b8a35ee3d80e21",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "Further Mathematics",
-        "students": [],
-        "term": "First Term",
-        "createdAt": "2026-04-19T06:56:57.508Z",
-        "updatedAt": "2026-04-19T06:56:57.508Z",
-        "__v": 0
       }
     ],
     "timetables": [
