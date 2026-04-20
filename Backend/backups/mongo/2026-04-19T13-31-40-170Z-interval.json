@@ -1,7 +1,7 @@
 {
   "meta": {
     "reason": "interval",
-    "timestamp": "2026-04-19T14:46:38.661Z",
+    "timestamp": "2026-04-19T13:31:40.170Z",
     "database": "prj001",
     "host": "localhost"
   },
@@ -13,7 +13,7 @@
     "attendances": 0,
     "results": 0,
     "payments": 4,
-    "messages": 2,
+    "messages": 1,
     "parentStudentLinks": 2
   },
   "data": {
@@ -484,29 +484,6 @@
         "roleTarget": "all",
         "createdAt": "2026-04-17T11:47:59.060Z",
         "updatedAt": "2026-04-17T11:47:59.060Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e4df7226b8a35ee3d8112f",
-        "school": "69e20acb42be74f1d7b495b4",
-        "title": "admission in progress",
-        "content": "the admission process is on",
-        "sender": "69e20acc42be74f1d7b495b6",
-        "recipients": [
-          "69e20ddb42be74f1d7b49744",
-          "69e47ddb26b8a35ee3d80f30",
-          "69e2702ea4603827f8cabe83",
-          "69e20c7942be74f1d7b49647",
-          "69e20dfa42be74f1d7b49767",
-          "69e26ea3a4603827f8cabd99",
-          "69e20acc42be74f1d7b495b6",
-          "69e20d3642be74f1d7b49683",
-          "69e47d1826b8a35ee3d80e6c",
-          "69e47d6a26b8a35ee3d80eaf"
-        ],
-        "roleTarget": "all",
-        "createdAt": "2026-04-19T13:58:10.822Z",
-        "updatedAt": "2026-04-19T13:58:10.822Z",
         "__v": 0
       }
     ],

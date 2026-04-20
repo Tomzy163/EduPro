@@ -1,0 +1,7 @@
+{
+  "to": "ezekieldisu@gmail.com",
+  "subject": "EduPro password reset",
+  "text": "Hello DIVINE,\n\nUse the link below to reset your password:\nhttp://localhost:5173/reset-password?token=91b7c8123f8c2e53f6f30b537ef5046033024796f5e3c0675f7b5a7a8809a5af\n\nThis link expires in 15 minutes.",
+  "htmlFile": "1776583483485-4259a098b68c.html",
+  "createdAt": "2026-04-19T07:24:43.494Z"
+}
