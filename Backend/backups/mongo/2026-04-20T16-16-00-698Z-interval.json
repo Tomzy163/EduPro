@@ -1,14 +1,14 @@
 {
   "meta": {
     "reason": "interval",
-    "timestamp": "2026-04-20T17:16:00.730Z",
+    "timestamp": "2026-04-20T16:16:00.698Z",
     "database": "prj001",
     "host": "localhost"
   },
   "counts": {
     "schools": 2,
-    "users": 13,
-    "courses": 24,
+    "users": 12,
+    "courses": 21,
     "timetables": 2,
     "attendances": 0,
     "results": 0,
@@ -266,21 +266,6 @@
         "createdAt": "2026-04-20T16:04:02.513Z",
         "updatedAt": "2026-04-20T16:04:02.513Z",
         "__v": 0
-      },
-      {
-        "_id": "69e654ccc6f36cdcc13240e3",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "ben",
-        "email": "ben@school.com",
-        "phoneNumber": "09123354678",
-        "password": "$2b$10$m4i97E3l3mwvWdhusDr8Vea6nNmBEZ6u7Br/mCMFMMPqjvc.4ypaa",
-        "role": "student",
-        "parents": [],
-        "courses": [],
-        "children": [],
-        "createdAt": "2026-04-20T16:31:08.819Z",
-        "updatedAt": "2026-04-20T16:31:08.819Z",
-        "__v": 0
       }
     ],
     "courses": [
@@ -507,36 +492,6 @@
         "term": "First Term",
         "createdAt": "2026-04-20T16:15:05.850Z",
         "updatedAt": "2026-04-20T16:15:05.850Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e655a7c6f36cdcc132412f",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "History",
-        "students": [],
-        "term": "First Term",
-        "createdAt": "2026-04-20T16:34:47.472Z",
-        "updatedAt": "2026-04-20T16:34:47.472Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e6561bc6f36cdcc132413f",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "Christian Religion Studies",
-        "students": [],
-        "term": "First Term",
-        "createdAt": "2026-04-20T16:36:43.915Z",
-        "updatedAt": "2026-04-20T16:36:43.915Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e65650c6f36cdcc132414f",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "Islamic Religion Studies",
-        "students": [],
-        "term": "First Term",
-        "createdAt": "2026-04-20T16:37:36.230Z",
-        "updatedAt": "2026-04-20T16:37:36.230Z",
         "__v": 0
       }
     ],

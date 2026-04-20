@@ -1,14 +1,14 @@
 {
   "meta": {
     "reason": "interval",
-    "timestamp": "2026-04-20T17:16:00.730Z",
+    "timestamp": "2026-04-20T15:00:18.485Z",
     "database": "prj001",
     "host": "localhost"
   },
   "counts": {
     "schools": 2,
-    "users": 13,
-    "courses": 24,
+    "users": 11,
+    "courses": 10,
     "timetables": 2,
     "attendances": 0,
     "results": 0,
@@ -251,36 +251,6 @@
         "createdAt": "2026-04-19T07:01:47.842Z",
         "updatedAt": "2026-04-19T07:01:47.842Z",
         "__v": 0
-      },
-      {
-        "_id": "69e64e72c6f36cdcc1323e78",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "Rebecca",
-        "email": "rebecca@school.com",
-        "phoneNumber": "09153259898",
-        "password": "$2b$10$OLBm7r32CHVtZyrHB3m3VO5IclhcemWW0rL0wEq4oEfS3a24EKb2y",
-        "role": "student",
-        "parents": [],
-        "courses": [],
-        "children": [],
-        "createdAt": "2026-04-20T16:04:02.513Z",
-        "updatedAt": "2026-04-20T16:04:02.513Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e654ccc6f36cdcc13240e3",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "ben",
-        "email": "ben@school.com",
-        "phoneNumber": "09123354678",
-        "password": "$2b$10$m4i97E3l3mwvWdhusDr8Vea6nNmBEZ6u7Br/mCMFMMPqjvc.4ypaa",
-        "role": "student",
-        "parents": [],
-        "courses": [],
-        "children": [],
-        "createdAt": "2026-04-20T16:31:08.819Z",
-        "updatedAt": "2026-04-20T16:31:08.819Z",
-        "__v": 0
       }
     ],
     "courses": [
@@ -397,146 +367,6 @@
         "term": "First Term",
         "createdAt": "2026-04-19T06:56:57.508Z",
         "updatedAt": "2026-04-19T06:56:57.508Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e64ec6c6f36cdcc1323e9c",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "Geography",
-        "students": [],
-        "term": "First Term",
-        "createdAt": "2026-04-20T16:05:26.488Z",
-        "updatedAt": "2026-04-20T16:05:26.488Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e64f0ac6f36cdcc1323f06",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "Lit - in - English",
-        "students": [],
-        "term": "First Term",
-        "createdAt": "2026-04-20T16:06:34.730Z",
-        "updatedAt": "2026-04-20T16:06:34.730Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e64f23c6f36cdcc1323f32",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "Financial Accounting",
-        "students": [],
-        "term": "First Term",
-        "createdAt": "2026-04-20T16:06:59.288Z",
-        "updatedAt": "2026-04-20T16:06:59.288Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e64f30c6f36cdcc1323f5e",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "Economics",
-        "students": [],
-        "term": "First Term",
-        "createdAt": "2026-04-20T16:07:12.779Z",
-        "updatedAt": "2026-04-20T16:07:12.779Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e64f43c6f36cdcc1323f8a",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "Food and Nut",
-        "students": [],
-        "term": "First Term",
-        "createdAt": "2026-04-20T16:07:31.901Z",
-        "updatedAt": "2026-04-20T16:07:31.901Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e64f4fc6f36cdcc1323fb6",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "Marketing",
-        "students": [],
-        "term": "First Term",
-        "createdAt": "2026-04-20T16:07:43.273Z",
-        "updatedAt": "2026-04-20T16:07:43.273Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e64f6bc6f36cdcc1323fe2",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "Data Processing",
-        "students": [],
-        "term": "First Term",
-        "createdAt": "2026-04-20T16:08:11.643Z",
-        "updatedAt": "2026-04-20T16:08:11.643Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e64f76c6f36cdcc132400e",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "Citizenship",
-        "students": [],
-        "term": "First Term",
-        "createdAt": "2026-04-20T16:08:22.333Z",
-        "updatedAt": "2026-04-20T16:08:22.333Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e64fcdc6f36cdcc132403a",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "Government",
-        "students": [],
-        "term": "First Term",
-        "createdAt": "2026-04-20T16:09:49.929Z",
-        "updatedAt": "2026-04-20T16:09:49.929Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e6502bc6f36cdcc1324066",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "Agricultural Science",
-        "students": [],
-        "term": "First Term",
-        "createdAt": "2026-04-20T16:11:23.009Z",
-        "updatedAt": "2026-04-20T16:11:23.009Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e65109c6f36cdcc1324092",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "Bookkeeping",
-        "students": [],
-        "term": "First Term",
-        "createdAt": "2026-04-20T16:15:05.850Z",
-        "updatedAt": "2026-04-20T16:15:05.850Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e655a7c6f36cdcc132412f",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "History",
-        "students": [],
-        "term": "First Term",
-        "createdAt": "2026-04-20T16:34:47.472Z",
-        "updatedAt": "2026-04-20T16:34:47.472Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e6561bc6f36cdcc132413f",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "Christian Religion Studies",
-        "students": [],
-        "term": "First Term",
-        "createdAt": "2026-04-20T16:36:43.915Z",
-        "updatedAt": "2026-04-20T16:36:43.915Z",
-        "__v": 0
-      },
-      {
-        "_id": "69e65650c6f36cdcc132414f",
-        "school": "69e20acb42be74f1d7b495b4",
-        "name": "Islamic Religion Studies",
-        "students": [],
-        "term": "First Term",
-        "createdAt": "2026-04-20T16:37:36.230Z",
-        "updatedAt": "2026-04-20T16:37:36.230Z",
         "__v": 0
       }
     ],
