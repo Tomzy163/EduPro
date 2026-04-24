@@ -4,23 +4,23 @@ export const SUBSCRIPTION_PLANS = {
     summary: "30-day access for new schools.",
   },
   normal: {
-    name: "Normal Plan",
-    summary: "Core school operations for smaller schools.",
+    name: "Basic Plan",
+    summary: "Core school operations plus AI student tutor access.",
     price: 75000,
   },
   supreme: {
-    name: "Supreme Plan",
-    summary: "Expanded reporting and collaboration tools.",
+    name: "Premium Plan",
+    summary: "Expanded analytics, AI tools, and collaboration workflows.",
     price: 100000,
   },
   gold: {
-    name: "Gold Plan",
-    summary: "High-capacity access for fast-growing schools.",
+    name: "Enterprise Plan",
+    summary: "High-capacity access with advanced operations and support.",
     price: 150000,
   },
   platinum: {
-    name: "Platinum Plan",
-    summary: "Full premium access for large institutions.",
+    name: "Enterprise Plus",
+    summary: "Full premium access for large institutions and priority scale.",
     price: 200000,
   },
 };
@@ -32,6 +32,7 @@ export const PLAN_FEATURES = {
     "timetable_setup",
     "attendance_tracking",
     "result_tracking",
+    "ai_student_tutor",
   ],
   supreme: [
     "user_management",
@@ -41,6 +42,11 @@ export const PLAN_FEATURES = {
     "result_tracking",
     "priority_communication",
     "reporting_workflow",
+    "ai_student_tutor",
+    "ai_exam_generator",
+    "ai_report_comments",
+    "ai_admin_analytics",
+    "ai_parent_assistant",
   ],
   gold: [
     "user_management",
@@ -52,6 +58,11 @@ export const PLAN_FEATURES = {
     "reporting_workflow",
     "high_volume_operations",
     "advanced_monitoring",
+    "ai_student_tutor",
+    "ai_exam_generator",
+    "ai_report_comments",
+    "ai_admin_analytics",
+    "ai_parent_assistant",
   ],
   platinum: [
     "user_management",
@@ -64,6 +75,11 @@ export const PLAN_FEATURES = {
     "high_volume_operations",
     "advanced_monitoring",
     "maximum_platform_access",
+    "ai_student_tutor",
+    "ai_exam_generator",
+    "ai_report_comments",
+    "ai_admin_analytics",
+    "ai_parent_assistant",
   ],
 };
 
@@ -78,6 +94,11 @@ export const FEATURE_LABELS = {
   high_volume_operations: "high-volume school operations",
   advanced_monitoring: "advanced monitoring",
   maximum_platform_access: "maximum platform access",
+  ai_student_tutor: "AI Student Tutor",
+  ai_exam_generator: "AI Exam Generator",
+  ai_report_comments: "AI Report Comment Generator",
+  ai_admin_analytics: "AI Admin Analytics",
+  ai_parent_assistant: "Parent AI Assistant",
 };
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
@@ -85,7 +106,7 @@ const SUBSCRIPTION_DURATION_DAYS = 30;
 
 export const getPlanFeatures = (plan = "trial") => {
   if (plan === "trial") {
-    return PLAN_FEATURES.platinum;
+    return PLAN_FEATURES.normal;
   }
 
   return PLAN_FEATURES[plan] || PLAN_FEATURES.normal;

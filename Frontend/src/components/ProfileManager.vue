@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useAuthStore } from "@/store/authStore";
 import { getMyProfile, updateMyProfile } from "@/services/userService";
 
@@ -13,6 +13,9 @@ const profile = ref({
 const loading = ref(false);
 const message = ref("");
 const tone = ref("primary");
+const loginCode = computed(
+  () => auth.school?.code || auth.user?.schoolCode || ""
+);
 
 const loadProfile = async () => {
   const data = await getMyProfile();
@@ -57,6 +60,9 @@ onMounted(loadProfile);
         <p class="section-copy">
           Keep your name, email address, and phone number up to date for resets and notifications.
         </p>
+        <p v-if="auth.user?.role === 'admin' && loginCode" class="login-code-note">
+          School login code: <strong>{{ loginCode }}</strong>
+        </p>
       </div>
     </div>
 
@@ -92,6 +98,12 @@ onMounted(loadProfile);
 .section-copy {
   margin: 8px 0 0;
   color: var(--text-soft);
+}
+
+.login-code-note {
+  margin: 12px 0 0;
+  color: #0f766e;
+  font-weight: 700;
 }
 
 .status-banner {

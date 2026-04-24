@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from "vue";
+import { apiBaseUrl } from "@/services/runtimeConfig";
 
 const props = defineProps({
   school: {
@@ -24,11 +25,27 @@ const hasAccountDetails = computed(() =>
       props.school?.paymentInstructions
   )
 );
+
+const logoUrl = computed(() => {
+  if (!props.school?.logo) {
+    return "";
+  }
+
+  return props.school.logo.startsWith("http")
+    ? props.school.logo
+    : `${apiBaseUrl.replace(/\/api$/, "")}/${props.school.logo.replace(/^\/+/, "")}`;
+});
 </script>
 
 <template>
   <section class="card account-card">
     <div class="account-copy">
+      <img
+        v-if="logoUrl"
+        :src="logoUrl"
+        alt="School logo"
+        class="school-logo"
+      />
       <p class="eyebrow">Payment Desk</p>
       <h2 class="section-title">{{ title }}</h2>
       <p class="section-copy">{{ subtitle }}</p>
@@ -72,6 +89,15 @@ const hasAccountDetails = computed(() =>
 
 .account-copy {
   margin-bottom: 18px;
+}
+
+.school-logo {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 18px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
 }
 
 .eyebrow {

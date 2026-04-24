@@ -37,7 +37,6 @@ const handleLogin = async () => {
       school: schoolName.value,
     });
 
-    console.log("LOGIN SUCCESS:", res);
 
     // ✅ Redirect only
     switch (res.user.role) {
@@ -56,8 +55,7 @@ const handleLogin = async () => {
     }
 
   } catch (err) {
-    console.log("FULL ERROR:", err);
-    error.value = err.message || "Login failed";
+    error.value = err?.message || err?.response?.data?.message || "Login failed";
   } finally {
     loading.value = false;
   }

@@ -7,9 +7,25 @@ const API = axios.create({
 
 API.interceptors.request.use((config) => {
   const token = sessionStorage.getItem("token");
+  const rawSchool = sessionStorage.getItem("school");
+  const rawUser = sessionStorage.getItem("user");
+
+  let schoolId = "";
+
+  try {
+    const school = rawSchool ? JSON.parse(rawSchool) : null;
+    const user = rawUser ? JSON.parse(rawUser) : null;
+    schoolId = school?._id || user?.schoolId || "";
+  } catch {
+    schoolId = "";
+  }
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  if (schoolId) {
+    config.headers["x-school-id"] = schoolId;
   }
 
   return config;
@@ -18,6 +34,16 @@ API.interceptors.request.use((config) => {
 API.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.response?.status === 401) {
+      sessionStorage.removeItem("user");
+      sessionStorage.removeItem("school");
+      sessionStorage.removeItem("token");
+
+      if (window.location.pathname !== "/") {
+        window.location.assign("/");
+      }
+    }
+
     if (error.response?.status === 402 && error.response?.data?.code === "SUBSCRIPTION_REQUIRED") {
       try {
         const rawUser = sessionStorage.getItem("user");
@@ -47,6 +73,14 @@ API.interceptors.response.use(
 
           if (window.location.pathname !== "/subscription") {
             window.location.assign("/subscription");
+          }
+        } else {
+          sessionStorage.removeItem("user");
+          sessionStorage.removeItem("school");
+          sessionStorage.removeItem("token");
+
+          if (window.location.pathname !== "/") {
+            window.location.assign("/");
           }
         }
       } catch {

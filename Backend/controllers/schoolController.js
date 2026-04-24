@@ -4,6 +4,7 @@ import User from "../models/User.js";
 import Payment from "../models/Payment.js";
 import { emitSchoolAdminUpdate } from "../utils/realtime.js";
 import { getSubscriptionSnapshot } from "../utils/subscription.js";
+import { syncLatestDatabaseBackup } from "../utils/databaseBackup.js";
 import {
   appendSchoolAlias,
   findSchoolByIdentifier,
@@ -13,6 +14,10 @@ const serializeSchool = (school) => ({
   _id: school._id,
   name: school.name,
   code: school.schoolCode || "",
+  logo: school.logo || "",
+  portalName: school.portalName || "",
+  primaryColor: school.primaryColor || "#0f766e",
+  accentColor: school.accentColor || "#1d4ed8",
   bankName: school.bankName || "",
   accountName: school.accountName || "",
   accountNumber: school.accountNumber || "",
@@ -58,6 +63,9 @@ export const updateMySchool = async (req, res) => {
 
     const previousName = school.name;
     school.name = nextName;
+    school.portalName = String(req.body.portalName || "").trim();
+    school.primaryColor = String(req.body.primaryColor || school.primaryColor || "#0f766e").trim();
+    school.accentColor = String(req.body.accentColor || school.accentColor || "#1d4ed8").trim();
     school.bankName = String(req.body.bankName || "").trim();
     school.accountName = String(req.body.accountName || "").trim();
     school.accountNumber = String(req.body.accountNumber || "").trim();
@@ -68,6 +76,7 @@ export const updateMySchool = async (req, res) => {
     }
 
     await school.save();
+    await syncLatestDatabaseBackup({ reason: "school-profile-update" });
 
     res.json({
       message: "School profile updated successfully.",
@@ -79,6 +88,39 @@ export const updateMySchool = async (req, res) => {
       entity: "school",
       action: "updated",
       message: "Admin updated school profile details.",
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const uploadSchoolLogo = async (req, res) => {
+  try {
+    const schoolId = req.user.school?._id || req.user.school;
+    const school = await School.findById(schoolId);
+
+    if (!school) {
+      return res.status(404).json({ message: "School not found" });
+    }
+
+    if (!req.file?.path) {
+      return res.status(400).json({ message: "Upload a school logo image." });
+    }
+
+    school.logo = req.file.path.replace(/\\/g, "/");
+    await school.save();
+    await syncLatestDatabaseBackup({ reason: "school-logo-update" });
+
+    res.json({
+      message: "School logo updated successfully.",
+      school: serializeSchool(school),
+    });
+
+    await emitSchoolAdminUpdate({
+      schoolId: school._id,
+      entity: "school",
+      action: "logo-updated",
+      message: "Admin updated the school logo.",
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -104,7 +146,7 @@ export const getDashboardSummary = async (req, res) => {
         {
           $match: {
             school: schoolId,
-            status: "approved",
+            status: { $in: ["approved", "success"] },
           },
         },
         {
@@ -122,6 +164,8 @@ export const getDashboardSummary = async (req, res) => {
     const paymentsByStatus = Object.fromEntries(
       paymentCounts.map((entry) => [entry._id, entry.count])
     );
+    const approvedPayments =
+      (paymentsByStatus.approved || 0) + (paymentsByStatus.success || 0);
 
     res.json({
       users: {
@@ -131,7 +175,7 @@ export const getDashboardSummary = async (req, res) => {
         admins: usersByRole.admin || 0,
       },
       payments: {
-        approved: paymentsByStatus.approved || 0,
+        approved: approvedPayments,
         pending: paymentsByStatus.pending || 0,
         rejected: paymentsByStatus.rejected || 0,
         total: Object.values(paymentsByStatus).reduce((sum, count) => sum + count, 0),

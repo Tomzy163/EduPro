@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { addSchoolBranding } from "@/utils/pdfBranding";
 
 const DAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -36,8 +37,9 @@ const mapSlot = (slot) => ({
   Audience: slot.audience || "-",
 });
 
-export const exportTimetablePdf = ({
+export const exportTimetablePdf = async ({
   slots = [],
+  school = null,
   schoolName = "EduPro School",
   title = "Timetable",
   fileName = "timetable.pdf",
@@ -49,20 +51,15 @@ export const exportTimetablePdf = ({
 
   const rows = sortTimetableSlots(slots).map(mapSlot);
   const doc = new jsPDF();
-
-  doc.setFontSize(20);
-  doc.text(schoolName, 14, 18);
-  doc.setFontSize(14);
-  doc.text(title, 14, 28);
-  doc.setFontSize(10);
-  doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 36);
-
-  if (subtitle) {
-    doc.text(subtitle, 14, 43);
-  }
+  const startY = await addSchoolBranding({
+    doc,
+    school: school || { name: schoolName },
+    title,
+    subtitle,
+  });
 
   autoTable(doc, {
-    startY: subtitle ? 50 : 44,
+    startY,
     head: [["Timetable", "Course", "Day", "Time", "Location", "Teacher", "Student"]],
     body: rows.map((row) => [
       row.Timetable,

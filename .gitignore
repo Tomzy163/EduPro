@@ -1,0 +1,9 @@
+Backend/.env
+Backend/node_modules/
+Backend/uploads/
+Backend/backups/
+Frontend/node_modules/
+Frontend/dist/
+Frontend/.vite/
+uploads/
+*.log

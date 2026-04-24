@@ -289,3 +289,27 @@ export const sendPasswordResetEmail = async ({ to, name, resetLink }) => {
     `,
   });
 };
+
+export const sendSchoolLoginCodeEmail = async ({
+  to,
+  adminName,
+  schoolName,
+  schoolCode,
+}) => {
+  return sendEmail({
+    to,
+    subject: "EduPro school login code",
+    text: `Hello ${adminName},\n\nYour school account for ${schoolName} is ready.\nLogin code: ${schoolCode}\n\nYou can sign in with your email address and this school login code anytime.`,
+    html: `
+      <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
+        <h2 style="margin-bottom: 8px;">EduPro Login Code</h2>
+        <p>Hello ${adminName},</p>
+        <p>Your school account for <strong>${schoolName}</strong> is ready.</p>
+        <p style="margin: 20px 0; padding: 14px 16px; border-radius: 14px; background: #ecfeff; color: #0f766e; font-size: 18px; font-weight: 700; letter-spacing: 0.08em;">
+          ${schoolCode}
+        </p>
+        <p>Use your email address and this login code whenever you sign in.</p>
+      </div>
+    `,
+  });
+};

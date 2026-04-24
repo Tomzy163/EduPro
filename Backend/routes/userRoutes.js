@@ -13,7 +13,7 @@ import {
   assignStudent,
   getStudentsWithCourses,
   getTeachersWithCourses,
-} from "../controllers/userController.js";
+} from "../controllers/userControllerV2.js";
 
 import { protect } from "../middleware/authMiddleware.js";
 import { authorize } from "../middleware/roleMiddleware.js";
@@ -26,8 +26,8 @@ const router = express.Router();
 
 // All routes protected
 router.use(protect);
-router.get("/profile", getMyProfile);
-router.put("/profile", updateMyProfile);
+router.get("/profile", requireSchoolAccess, getMyProfile);
+router.put("/profile", requireSchoolAccess, updateMyProfile);
 router.use(requireSchoolAccess);
 
 // ADMIN ONLY ROUTES

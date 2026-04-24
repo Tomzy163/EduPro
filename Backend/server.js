@@ -1,10 +1,12 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import helmet from "helmet";
 import http from "http";
 import { Server } from "socket.io";
 import connectDatabase from "./config/database.js";
 import authRoutes from "./routes/authRoutes.js";
+import aiRoutes from "./routes/aiRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import courseRoutes from "./routes/courseRoutes.js";
 import resultRoutes from "./routes/resultRoutes.js";
@@ -19,6 +21,12 @@ import {
   stopDatabaseBackupInterval,
 } from "./utils/databaseBackup.js";
 import {
+  allowedOrigins,
+  securityHeaders,
+} from "./middleware/securityMiddleware.js";
+import { sanitizeRequestPayload } from "./middleware/requestSanitizer.js";
+import { createRateLimiter } from "./middleware/rateLimitMiddleware.js";
+import {
   registerSocketUser,
   setIo,
   unregisterSocketUser,
@@ -28,14 +36,45 @@ dotenv.config();
 
 const app = express();
 const clientOrigin = process.env.CLIENT_URL || "http://localhost:5173";
+const globalRateLimiter = createRateLimiter({
+  keyPrefix: "global-api",
+  windowMs: 15 * 60 * 1000,
+  max: 800,
+  message: "Too many requests from this device. Please slow down and try again shortly.",
+});
+
+app.set("trust proxy", 1);
+app.disable("x-powered-by");
+app.use(securityHeaders);
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: "same-site" },
+  })
+);
+app.use(globalRateLimiter);
 
 app.use(
   cors({
-    origin: clientOrigin,
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Origin is not allowed by CORS"));
+    },
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "x-paystack-signature",
+      "x-school-id",
+    ],
   })
 );
 app.use(
   express.json({
+    limit: "1mb",
     verify: (req, _res, buffer) => {
       if (buffer?.length) {
         req.rawBody = buffer.toString("utf8");
@@ -43,8 +82,11 @@ app.use(
     },
   })
 );
+app.use(express.urlencoded({ extended: false, limit: "1mb" }));
+app.use(sanitizeRequestPayload);
 app.use("/uploads", express.static("uploads"));
 app.use("/api/auth", authRoutes);
+app.use("/api/ai", aiRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/results", resultRoutes);
@@ -54,12 +96,37 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/timetable", timetableRoutes);
 app.use("/api/relationships", relationshipRoutes);
 app.use("/api/school", schoolRoutes);
+app.use((error, _req, res, _next) => {
+  if (!error) {
+    return res.status(500).json({ message: "Unexpected server error." });
+  }
+
+  if (
+    error.message === "Only images or PDF allowed" ||
+    error.message === "Only image files are allowed for the school logo"
+  ) {
+    return res.status(400).json({ message: error.message });
+  }
+
+  if (error.message === "Origin is not allowed by CORS") {
+    return res.status(403).json({ message: error.message });
+  }
+
+  if (error.name === "MulterError") {
+    return res.status(400).json({ message: error.message });
+  }
+
+  console.error("SERVER ERROR:", error);
+  return res.status(error.statusCode || 500).json({
+    message: error.message || "Internal server error",
+  });
+});
 
 const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: clientOrigin,
+    origin: allowedOrigins,
   },
 });
 

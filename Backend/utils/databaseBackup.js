@@ -198,6 +198,15 @@ export const createDatabaseBackup = async ({ reason = "manual" } = {}) => {
   return activeBackupPromise;
 };
 
+export const syncLatestDatabaseBackup = async ({ reason = "sync" } = {}) => {
+  try {
+    return await createDatabaseBackup({ reason });
+  } catch (error) {
+    console.error(`Failed to sync the latest backup after ${reason}:`, error.message);
+    return null;
+  }
+};
+
 export const startDatabaseBackupInterval = () => {
   if (!backupsEnabled()) {
     return;

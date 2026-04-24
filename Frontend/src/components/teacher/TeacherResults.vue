@@ -8,14 +8,19 @@ import {
   updateResult,
   deleteResult,
 } from "@/services/resultService";
+import { addSchoolBranding } from "@/utils/pdfBranding";
+import { useAuthStore } from "@/store/authStore";
 import socket from "@/socket";
 
+const auth = useAuthStore();
 const results = ref([]);
 const editId = ref(null);
 const editScore = ref("");
 const editGrade = ref("");
 const search = ref("");
 const courseFilter = ref("");
+
+const school = computed(() => auth.school || {});
 
 const fetchResults = async () => {
   const data = await getTeacherResults();
@@ -58,31 +63,46 @@ const remove = async (id) => {
   await fetchResults();
 };
 
-const downloadSingleResult = (result) => {
+const downloadSingleResult = async (result) => {
   const doc = new jsPDF();
-  doc.setFontSize(18);
-  doc.text("Student Result Slip", 14, 18);
-  doc.setFontSize(12);
-  doc.text(`Student: ${result.student?.name || "Student"}`, 14, 32);
-  doc.text(`Course: ${result.course?.name || "Course"}`, 14, 40);
-  doc.text(`Score: ${result.score ?? "-"}`, 14, 48);
-  doc.text(`Grade: ${result.grade ?? "-"}`, 14, 56);
-  doc.text(`Date: ${new Date(result.createdAt).toLocaleDateString()}`, 14, 64);
+  const startY = await addSchoolBranding({
+    doc,
+    school: school.value,
+    title: "Student Result Slip",
+    subtitle: `${result.student?.name || "Student"} result record`,
+  });
+
+  autoTable(doc, {
+    startY,
+    head: [["Field", "Value"]],
+    body: [
+      ["Student", result.student?.name || "Student"],
+      ["Course", result.course?.name || "Course"],
+      ["Score", result.score ?? "-"],
+      ["Grade", result.grade ?? "-"],
+      ["Date", new Date(result.createdAt).toLocaleDateString()],
+    ],
+  });
+
   doc.save(`${(result.student?.name || "student").replace(/\s+/g, "-").toLowerCase()}-result.pdf`);
 };
 
-const downloadGroupedResultsPdf = () => {
+const downloadGroupedResultsPdf = async () => {
   if (filteredResults.value.length === 0) {
     alert("No result records are available for the current filter.");
     return;
   }
 
   const doc = new jsPDF();
-  doc.setFontSize(18);
-  doc.text("Class Result Report", 14, 18);
+  const startY = await addSchoolBranding({
+    doc,
+    school: school.value,
+    title: "Class Result Report",
+    subtitle: "Teacher export",
+  });
 
   autoTable(doc, {
-    startY: 28,
+    startY,
     head: [["Student", "Course", "Score", "Grade", "Date"]],
     body: filteredResults.value.map((result) => [
       result.student?.name || "Student",
@@ -120,10 +140,12 @@ const downloadGroupedResultsExcel = () => {
 onMounted(async () => {
   await fetchResults();
   socket.on("resultUpdated", fetchResults);
+  socket.on("admin:update", fetchResults);
 });
 
 onUnmounted(() => {
   socket.off("resultUpdated", fetchResults);
+  socket.off("admin:update", fetchResults);
 });
 </script>
 

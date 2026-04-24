@@ -1,21 +1,25 @@
 <script setup>
 import { computed, onMounted, ref } from "vue";
 import { useAuthStore } from "@/store/authStore";
+import { useUiStore } from "@/store/uiStore";
+import { createCourse, getCourses } from "@/services/courseService";
+import { apiBaseUrl } from "@/services/runtimeConfig";
 import {
-  assignStudent,
-  assignTeacher,
-  createCourse,
-  getCourses,
-} from "@/services/courseService";
-import { getMySchool, updateMySchool } from "@/services/schoolService";
-import { getUsers } from "@/services/userService";
+  getMySchool,
+  updateMySchool,
+  uploadSchoolLogo,
+} from "@/services/schoolService";
 
 const auth = useAuthStore();
+const ui = useUiStore();
 const courses = ref([]);
-const users = ref([]);
 const schoolProfile = ref({
   code: "",
   name: "",
+  logo: "",
+  portalName: "",
+  primaryColor: "#0f766e",
+  accentColor: "#1d4ed8",
   bankName: "",
   accountName: "",
   accountNumber: "",
@@ -24,38 +28,37 @@ const schoolProfile = ref({
 
 const courseName = ref("");
 const courseTerm = ref("First Term");
-const selectedCourseId = ref("");
-const selectedTeacherId = ref("");
-const selectedStudentIds = ref([]);
 const loading = ref(false);
 const profileLoading = ref(false);
+const logoLoading = ref(false);
+const logoFile = ref(null);
 const statusMessage = ref("");
 const statusTone = ref("primary");
 
-const teachers = computed(() =>
-  users.value.filter((user) => user.role === "teacher")
-);
+const logoPreview = computed(() => {
+  if (!schoolProfile.value.logo) {
+    return "";
+  }
 
-const students = computed(() =>
-  users.value.filter((user) => user.role === "student")
-);
-
-const selectedCourse = computed(() =>
-  courses.value.find((course) => course._id === selectedCourseId.value)
-);
+  return schoolProfile.value.logo.startsWith("http")
+    ? schoolProfile.value.logo
+    : `${apiBaseUrl.replace(/\/api$/, "")}/${schoolProfile.value.logo.replace(/^\/+/, "")}`;
+});
 
 const fetchData = async () => {
-  const [courseData, userData, schoolData] = await Promise.all([
+  const [courseData, schoolData] = await Promise.all([
     getCourses(),
-    getUsers(),
     getMySchool(),
   ]);
 
   courses.value = courseData;
-  users.value = userData;
   schoolProfile.value = {
     code: schoolData.school?.code || "",
     name: schoolData.school?.name || "",
+    logo: schoolData.school?.logo || "",
+    portalName: schoolData.school?.portalName || "",
+    primaryColor: schoolData.school?.primaryColor || "#0f766e",
+    accentColor: schoolData.school?.accentColor || "#1d4ed8",
     bankName: schoolData.school?.bankName || "",
     accountName: schoolData.school?.accountName || "",
     accountNumber: schoolData.school?.accountNumber || "",
@@ -65,7 +68,11 @@ const fetchData = async () => {
 
 const handleSaveSchoolProfile = async () => {
   if (!schoolProfile.value.name.trim()) {
-    alert("Enter a school name.");
+    ui.pushToast({
+      title: "Missing school name",
+      message: "Enter a school name before saving.",
+      tone: "error",
+    });
     return;
   }
 
@@ -75,6 +82,9 @@ const handleSaveSchoolProfile = async () => {
   try {
     const response = await updateMySchool({
       name: schoolProfile.value.name,
+      portalName: schoolProfile.value.portalName,
+      primaryColor: schoolProfile.value.primaryColor,
+      accentColor: schoolProfile.value.accentColor,
       bankName: schoolProfile.value.bankName,
       accountName: schoolProfile.value.accountName,
       accountNumber: schoolProfile.value.accountNumber,
@@ -84,6 +94,10 @@ const handleSaveSchoolProfile = async () => {
     schoolProfile.value = {
       code: response.school?.code || "",
       name: response.school?.name || "",
+      logo: response.school?.logo || schoolProfile.value.logo,
+      portalName: response.school?.portalName || "",
+      primaryColor: response.school?.primaryColor || "#0f766e",
+      accentColor: response.school?.accentColor || "#1d4ed8",
       bankName: response.school?.bankName || "",
       accountName: response.school?.accountName || "",
       accountNumber: response.school?.accountNumber || "",
@@ -101,9 +115,49 @@ const handleSaveSchoolProfile = async () => {
   }
 };
 
+const handleLogoChange = (event) => {
+  logoFile.value = event.target.files?.[0] || null;
+};
+
+const handleUploadLogo = async () => {
+  if (!logoFile.value) {
+    ui.pushToast({
+      title: "Logo required",
+      message: "Select a logo image before uploading.",
+      tone: "error",
+    });
+    return;
+  }
+
+  logoLoading.value = true;
+  statusMessage.value = "";
+
+  try {
+    const formData = new FormData();
+    formData.append("logo", logoFile.value);
+    const response = await uploadSchoolLogo(formData);
+
+    schoolProfile.value.logo = response.school?.logo || "";
+    auth.updateSchool(response.school);
+    logoFile.value = null;
+    statusTone.value = "success";
+    statusMessage.value = response.message || "School logo updated successfully.";
+  } catch (error) {
+    statusTone.value = "danger";
+    statusMessage.value =
+      error.response?.data?.message || "Failed to upload the school logo.";
+  } finally {
+    logoLoading.value = false;
+  }
+};
+
 const handleCreateCourse = async () => {
   if (!courseName.value.trim()) {
-    alert("Enter a course name.");
+    ui.pushToast({
+      title: "Course required",
+      message: "Enter a course name before creating it.",
+      tone: "error",
+    });
     return;
   }
 
@@ -130,63 +184,6 @@ const handleCreateCourse = async () => {
   }
 };
 
-const handleAssignTeacher = async () => {
-  if (!selectedCourseId.value || !selectedTeacherId.value) {
-    alert("Select a course and teacher.");
-    return;
-  }
-
-  loading.value = true;
-  statusMessage.value = "";
-
-  try {
-    await assignTeacher({
-      courseId: selectedCourseId.value,
-      teacherId: selectedTeacherId.value,
-    });
-
-    statusTone.value = "success";
-    statusMessage.value = "Teacher assigned successfully.";
-    await fetchData();
-  } catch (error) {
-    statusTone.value = "danger";
-    statusMessage.value =
-      error.response?.data?.message || "Failed to assign teacher.";
-  } finally {
-    loading.value = false;
-  }
-};
-
-const handleAssignStudents = async () => {
-  if (!selectedCourseId.value || selectedStudentIds.value.length === 0) {
-    alert("Select a course and at least one student.");
-    return;
-  }
-
-  loading.value = true;
-  statusMessage.value = "";
-
-  try {
-    for (const studentId of selectedStudentIds.value) {
-      await assignStudent({
-        courseId: selectedCourseId.value,
-        studentId,
-      });
-    }
-
-    selectedStudentIds.value = [];
-    statusTone.value = "success";
-    statusMessage.value = "Students assigned successfully.";
-    await fetchData();
-  } catch (error) {
-    statusTone.value = "danger";
-    statusMessage.value =
-      error.response?.data?.message || "Failed to assign students.";
-  } finally {
-    loading.value = false;
-  }
-};
-
 onMounted(fetchData);
 </script>
 
@@ -197,16 +194,29 @@ onMounted(fetchData);
     </div>
 
     <div class="section-block identity-block">
-      <h2 class="section-title">School Identity And Payment Account</h2>
+      <h2 class="section-title">School Identity, Login Code, And Payment Account</h2>
       <p class="section-copy">
-        Update the school name and the account details that students, parents, teachers, and admins can view for school-fee payments.
+        Update the school name, official payment account, and school logo shown across admin, parent, student, and teacher views.
       </p>
       <p v-if="schoolProfile.code" class="identity-note">
         Login code: <strong>{{ schoolProfile.code }}</strong>. Users can sign in with this code even after the school name changes.
       </p>
 
+      <div class="logo-panel">
+        <img v-if="logoPreview" :src="logoPreview" alt="School logo" class="logo-preview" />
+        <div class="logo-actions">
+          <input type="file" accept="image/*" class="input" @change="handleLogoChange" />
+          <button @click="handleUploadLogo" class="btn btn-primary" :disabled="logoLoading">
+            {{ logoLoading ? "Uploading..." : "Upload School Logo" }}
+          </button>
+        </div>
+      </div>
+
       <div class="form-grid">
         <input v-model="schoolProfile.name" class="input" placeholder="School name" />
+        <input v-model="schoolProfile.portalName" class="input" placeholder="Custom portal name" />
+        <input v-model="schoolProfile.primaryColor" class="input" placeholder="Primary color hex" />
+        <input v-model="schoolProfile.accentColor" class="input" placeholder="Accent color hex" />
         <input v-model="schoolProfile.bankName" class="input" placeholder="Bank name" />
         <input v-model="schoolProfile.accountName" class="input" placeholder="Account name" />
         <input v-model="schoolProfile.accountNumber" class="input" placeholder="Account number" />
@@ -224,7 +234,7 @@ onMounted(fetchData);
     <div class="section-block">
       <h2 class="section-title">Course Management</h2>
       <p class="section-copy">
-        Create courses, attach a teacher, and enroll students for the current school.
+        Create the courses that teachers and students can later be assigned to from the assignment history module.
       </p>
 
       <div class="form-grid">
@@ -244,49 +254,6 @@ onMounted(fetchData);
           {{ loading ? "Saving..." : "Create Course" }}
         </button>
       </div>
-    </div>
-
-    <div class="section-block">
-      <h3 class="section-title">Assign Course Owner And Students</h3>
-
-      <div class="form-grid">
-        <select v-model="selectedCourseId" class="input">
-          <option disabled value="">Select Course</option>
-          <option v-for="course in courses" :key="course._id" :value="course._id">
-            {{ course.name }} - {{ course.term || "No term" }}
-          </option>
-        </select>
-
-        <select v-model="selectedTeacherId" class="input">
-          <option disabled value="">Select Teacher</option>
-          <option v-for="teacher in teachers" :key="teacher._id" :value="teacher._id">
-            {{ teacher.name }}
-          </option>
-        </select>
-
-        <button @click="handleAssignTeacher" class="btn btn-success" :disabled="loading">
-          {{ loading ? "Saving..." : "Assign Teacher" }}
-        </button>
-      </div>
-
-      <div class="student-picker">
-        <label
-          v-for="student in students"
-          :key="student._id"
-          class="student-option"
-        >
-          <input
-            v-model="selectedStudentIds"
-            :value="student._id"
-            type="checkbox"
-          />
-          <span>{{ student.name }}</span>
-        </label>
-      </div>
-
-      <button @click="handleAssignStudents" class="btn btn-primary" :disabled="loading">
-        {{ loading ? "Saving..." : "Assign Selected Students" }}
-      </button>
     </div>
 
     <div class="section-block">
@@ -377,21 +344,27 @@ onMounted(fetchData);
   font-weight: 600;
 }
 
-.student-picker {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 10px;
-  margin: 16px 0;
+.logo-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 18px;
 }
 
-.student-option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 14px;
+.logo-preview {
+  width: 88px;
+  height: 88px;
+  object-fit: cover;
+  border-radius: 22px;
   border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 14px;
   background: #fff;
+}
+
+.logo-actions {
+  display: grid;
+  gap: 10px;
+  min-width: min(320px, 100%);
 }
 
 .textarea {

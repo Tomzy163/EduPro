@@ -76,6 +76,26 @@ const schoolSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+    logo: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    portalName: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    primaryColor: {
+      type: String,
+      default: "#0f766e",
+      trim: true,
+    },
+    accentColor: {
+      type: String,
+      default: "#1d4ed8",
+      trim: true,
+    },
     paymentInstructions: {
       type: String,
       default: "",

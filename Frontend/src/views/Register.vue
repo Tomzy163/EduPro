@@ -45,13 +45,6 @@ const handleRegister = async () => {
     }
 
     loading.value = true;
-          console.log("Sending:", {
-        name: name.value,
-        email: email.value,
-        phoneNumber: phoneNumber.value,
-        password: password.value,
-        school: schoolName.value,
-      });
     error.value = "";
     if (!schoolName.value) return alert("Enter school name");
 
@@ -76,12 +69,16 @@ const handleRegister = async () => {
     }
 
     success.value = res?.school?.code
-      ? `Admin account created successfully. Login code: ${res.school.code}`
+      ? `Admin account created successfully. Login code: ${res.school.code}${
+          res?.notifications?.emailPreviewUrl
+            ? " Email preview generated for this device."
+            : ""
+        }`
       : success.value;
 
     setTimeout(() => router.push("/"), 1500);
   } catch (err) {
-    error.value = err.response?.data?.message || "Registration failed";
+    error.value = err?.response?.data?.message || err?.message || "Registration failed";
   } finally {
     loading.value = false;
   }

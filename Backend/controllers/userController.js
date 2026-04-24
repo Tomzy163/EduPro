@@ -1,25 +1,109 @@
-// backend/controllers/userController.js
-import User from "../models/User.js";
 import bcrypt from "bcryptjs";
+import Course from "../models/Course.js";
+import User from "../models/User.js";
 import { emitSchoolAdminUpdate } from "../utils/realtime.js";
+import {
+  hasMinimumPasswordLength,
+  isValidEmail,
+  isValidObjectId,
+  normalizeDisplayName,
+  normalizeEmail,
+  normalizePhoneNumber,
+} from "../utils/validation.js";
+
+const VALID_USER_ROLES = new Set(["admin", "teacher", "student", "parent"]);
+
+const getSchoolId = (req) => req.user.school?._id || req.user.school;
+
+const sanitizeUserInput = (payload = {}) => ({
+  name: normalizeDisplayName(payload.name),
+  email: normalizeEmail(payload.email),
+  phoneNumber: normalizePhoneNumber(payload.phoneNumber),
+  role: String(payload.role || "").trim().toLowerCase(),
+});
+
+const ensureUniqueSchoolEmail = async ({
+  schoolId,
+  email,
+  excludeUserId = null,
+}) => {
+  const query = {
+    school: schoolId,
+    email,
+  };
+
+  if (excludeUserId) {
+    query._id = { $ne: excludeUserId };
+  }
+
+  const existingUser = await User.findOne(query).select("_id");
+  return !existingUser;
+};
+
+const countSchoolAdmins = async (schoolId, excludeUserId = null) => {
+  const query = {
+    school: schoolId,
+    role: "admin",
+  };
+
+  if (excludeUserId) {
+    query._id = { $ne: excludeUserId };
+  }
+
+  return User.countDocuments(query);
+};
+
+const findSchoolUser = async (userId, schoolId, role = "") => {
+  if (!isValidObjectId(userId)) {
+    return null;
+  }
+
+  const query = {
+    _id: userId,
+    school: schoolId,
+  };
+
+  if (role) {
+    query.role = role;
+  }
+
+  return User.findOne(query);
+};
+
+const populateUserRecord = (userId) =>
+  User.findById(userId).select("-password").populate("school");
+
+const syncStudentCourse = async ({ student, course }) => {
+  if (!student.courses.some((courseId) => String(courseId) === String(course._id))) {
+    student.courses.push(course._id);
+    await student.save();
+  }
+
+  if (!course.students.some((studentId) => String(studentId) === String(student._id))) {
+    course.students.push(student._id);
+    await course.save();
+  }
+};
 
 /* =========================
    REGISTER ADMIN (NEW SCHOOL)
 ========================= */
 export const registerUser = async (req, res) => {
   try {
-    console.log("Incoming data:", req.body);
-
-    const { name, email, password, school } = req.body;
+    const { name, email, phoneNumber, role } = sanitizeUserInput(req.body);
+    const password = String(req.body.password || "");
+    const schoolId = req.body.school?._id || req.body.school;
 
     // ✅ Validate
-    if (!name || !email || !password || !school) {
+    if (!name || !email || !password || !schoolId || !role) {
       return res.status(400).json({
-        message: "All fields including school are required",
+        message: "Name, email, phone number, password, school, and role are required.",
       });
     }
 
-    const existingUser = await User.findOne({ email, school });
+    if (!VALID_USER_ROLES.has(role)) {
+      return res.status(400).json({ message: "Select a valid user role." });
+    }
     if (existingUser) {
       return res.status(400).json({
         message: "Admin already exists for this school",

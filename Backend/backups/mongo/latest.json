@@ -1,14 +1,14 @@
 {
   "meta": {
-    "reason": "interval",
-    "timestamp": "2026-04-20T17:16:00.730Z",
+    "reason": "school-logo-update",
+    "timestamp": "2026-04-24T05:39:39.506Z",
     "database": "prj001",
     "host": "localhost"
   },
   "counts": {
-    "schools": 2,
-    "users": 13,
-    "courses": 24,
+    "schools": 3,
+    "users": 14,
+    "courses": 25,
     "timetables": 2,
     "attendances": 0,
     "results": 0,
@@ -64,6 +64,32 @@
         "trialEndsAt": "2026-05-18T08:23:51.673Z",
         "createdAt": "2026-04-18T08:23:51.677Z",
         "updatedAt": "2026-04-19T07:23:02.036Z",
+        "__v": 0
+      },
+      {
+        "_id": "69eafea2de1a956c6508db7e",
+        "name": "Divine",
+        "normalizedName": "divine",
+        "schoolCode": "DIVINE-2494",
+        "aliases": [],
+        "aliasesNormalized": [],
+        "currentPlan": "trial",
+        "subscriptionStatus": "trial",
+        "subscriptionStartedAt": null,
+        "subscriptionEndsAt": null,
+        "subscribedAt": null,
+        "bankName": "",
+        "accountName": "",
+        "accountNumber": "",
+        "logo": "uploads/schools/1777009179453-Tomzy.jpg",
+        "portalName": "",
+        "primaryColor": "#0f766e",
+        "accentColor": "#1d4ed8",
+        "paymentInstructions": "",
+        "trialStartedAt": "2026-04-24T05:24:50.823Z",
+        "trialEndsAt": "2026-05-24T05:24:50.824Z",
+        "createdAt": "2026-04-24T05:24:50.939Z",
+        "updatedAt": "2026-04-24T05:39:39.475Z",
         "__v": 0
       }
     ],
@@ -280,6 +306,21 @@
         "children": [],
         "createdAt": "2026-04-20T16:31:08.819Z",
         "updatedAt": "2026-04-20T16:31:08.819Z",
+        "__v": 0
+      },
+      {
+        "_id": "69eafea3de1a956c6508db81",
+        "school": "69eafea2de1a956c6508db7e",
+        "name": "Divine",
+        "email": "excelempire@gmail.com",
+        "phoneNumber": "9163663404",
+        "password": "$2b$10$vHiHNFAY7YS9lN2NysA4a.UV7GQblnVax5jwImNLqD89vTDpdE9Fq",
+        "role": "admin",
+        "parents": [],
+        "courses": [],
+        "children": [],
+        "createdAt": "2026-04-24T05:24:51.528Z",
+        "updatedAt": "2026-04-24T05:24:51.528Z",
         "__v": 0
       }
     ],
@@ -537,6 +578,16 @@
         "term": "First Term",
         "createdAt": "2026-04-20T16:37:36.230Z",
         "updatedAt": "2026-04-20T16:37:36.230Z",
+        "__v": 0
+      },
+      {
+        "_id": "69eb002fde1a956c6508dbf3",
+        "school": "69eafea2de1a956c6508db7e",
+        "name": "Mathematics",
+        "students": [],
+        "term": "First Term",
+        "createdAt": "2026-04-24T05:31:27.870Z",
+        "updatedAt": "2026-04-24T05:31:27.870Z",
         "__v": 0
       }
     ],

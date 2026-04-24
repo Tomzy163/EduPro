@@ -42,6 +42,18 @@ export const generateSchoolCodeCandidate = (value = "") => {
   return `${prefix}-${suffix}`;
 };
 
+export const generateStableSchoolCodeCandidate = (value = "", seed = "") => {
+  const prefix = buildSchoolCodePrefix(value);
+  const suffix = crypto
+    .createHash("sha256")
+    .update(String(seed || value || "school-code"))
+    .digest("hex")
+    .slice(0, 4)
+    .toUpperCase();
+
+  return `${prefix}-${suffix}`;
+};
+
 export const normalizeSchoolAliases = (aliases = [], currentName = "") => {
   const normalizedCurrent = normalizeSchoolName(currentName);
   const uniqueAliases = new Map();

@@ -26,6 +26,37 @@ const students = computed(() =>
   users.value.filter((user) => user.role === "student")
 );
 
+const groupedHistory = computed(() => {
+  const groups = history.value.reduce((acc, item) => {
+    const parentKey = item.parent?._id;
+
+    if (!parentKey) {
+      return acc;
+    }
+
+    if (!acc[parentKey]) {
+      acc[parentKey] = {
+        parent: item.parent,
+        children: [],
+      };
+    }
+
+    acc[parentKey].children.push(item);
+    return acc;
+  }, {});
+
+  return Object.values(groups)
+    .map((group) => ({
+      ...group,
+      children: [...group.children].sort((left, right) =>
+        (left.student?.name || "").localeCompare(right.student?.name || "")
+      ),
+    }))
+    .sort((left, right) =>
+      (left.parent?.name || "").localeCompare(right.parent?.name || "")
+    );
+});
+
 const linkedCounts = computed(() => {
   return history.value.reduce((acc, item) => {
     const parentKey = item.parent?._id;
@@ -168,7 +199,7 @@ onMounted(refreshAll);
       <div>
         <h2 class="section-title">Parent And Child Linking</h2>
         <p class="section-copy">
-          Link one parent to one or many children, then review every saved relationship below.
+          Link one parent to one or many children, then review grouped parent-child history below.
         </p>
       </div>
       <div class="quick-stat">
@@ -222,69 +253,78 @@ onMounted(refreshAll);
           class="btn btn-danger"
           :disabled="deletingAll"
         >
-          {{ deletingAll ? "Deleting..." : "Delete All Links" }}
+          {{ deletingAll ? "Deleting..." : "Clear All" }}
         </button>
       </div>
     </div>
 
     <div class="history-shell">
-      <div v-if="history.length === 0" class="empty">
+      <div v-if="groupedHistory.length === 0" class="empty">
         No parent-child links have been created yet.
       </div>
 
-      <div v-else class="table-wrapper">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Parent</th>
-              <th>Child</th>
-              <th>Linked By</th>
-              <th>Date</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in history" :key="item._id">
-              <template v-if="editId === item._id">
-                <td>
-                  <select v-model="editParent" class="input">
-                    <option v-for="parent in parents" :key="parent._id" :value="parent._id">
-                      {{ parent.name }}
-                    </option>
-                  </select>
-                </td>
-                <td>
-                  <select v-model="editStudent" class="input">
-                    <option v-for="student in students" :key="student._id" :value="student._id">
-                      {{ student.name }}
-                    </option>
-                  </select>
-                </td>
-                <td>{{ item.linkedBy?.name || "Admin" }}</td>
-                <td>{{ new Date(item.createdAt).toLocaleDateString() }}</td>
-                <td class="actions">
-                  <button @click="updateLink" class="btn btn-success btn-small">Save</button>
-                  <button @click="cancelEdit" class="btn btn-secondary btn-small">Cancel</button>
-                </td>
-              </template>
+      <div v-else class="history-groups">
+        <article v-for="group in groupedHistory" :key="group.parent._id" class="history-card">
+          <div class="history-card-head">
+            <div>
+              <h3>{{ group.parent.name }}</h3>
+              <p>{{ group.parent.email }}</p>
+            </div>
+            <span class="history-count">{{ group.children.length }} linked child{{ group.children.length === 1 ? "" : "ren" }}</span>
+          </div>
 
-              <template v-else>
-                <td>{{ item.parent?.name }}</td>
-                <td>{{ item.student?.name }}</td>
-                <td>{{ item.linkedBy?.name || "Admin" }}</td>
-                <td>{{ new Date(item.createdAt).toLocaleDateString() }}</td>
-                <td class="actions">
-                  <button @click="startEdit(item)" class="btn btn-primary btn-small">
-                    Edit
-                  </button>
-                  <button @click="removeLink(item._id)" class="btn btn-danger btn-small">
-                    Delete
-                  </button>
-                </td>
-              </template>
-            </tr>
-          </tbody>
-        </table>
+          <div class="table-wrapper">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Child</th>
+                  <th>Linked By</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in group.children" :key="item._id">
+                  <template v-if="editId === item._id">
+                    <td>
+                      <select v-model="editStudent" class="input">
+                        <option v-for="student in students" :key="student._id" :value="student._id">
+                          {{ student.name }}
+                        </option>
+                      </select>
+                    </td>
+                    <td>
+                      <select v-model="editParent" class="input">
+                        <option v-for="parent in parents" :key="parent._id" :value="parent._id">
+                          {{ parent.name }}
+                        </option>
+                      </select>
+                    </td>
+                    <td>{{ new Date(item.createdAt).toLocaleDateString() }}</td>
+                    <td class="actions">
+                      <button @click="updateLink" class="btn btn-success btn-small">Save</button>
+                      <button @click="cancelEdit" class="btn btn-secondary btn-small">Cancel</button>
+                    </td>
+                  </template>
+
+                  <template v-else>
+                    <td>{{ item.student?.name }}</td>
+                    <td>{{ item.linkedBy?.name || "Admin" }}</td>
+                    <td>{{ new Date(item.createdAt).toLocaleDateString() }}</td>
+                    <td class="actions">
+                      <button @click="startEdit(item)" class="btn btn-primary btn-small">
+                        Edit
+                      </button>
+                      <button @click="removeLink(item._id)" class="btn btn-danger btn-small">
+                        Delete
+                      </button>
+                    </td>
+                  </template>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
       </div>
     </div>
   </section>
@@ -390,6 +430,40 @@ onMounted(refreshAll);
   margin-top: 22px;
 }
 
+.history-groups {
+  display: grid;
+  gap: 16px;
+}
+
+.history-card {
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.98), #ffffff);
+}
+
+.history-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.history-card-head h3 {
+  margin: 0;
+}
+
+.history-card-head p {
+  margin: 6px 0 0;
+  color: var(--text-soft);
+}
+
+.history-count {
+  color: #0f766e;
+  font-weight: 700;
+}
+
 .actions {
   display: flex;
   gap: 8px;
@@ -407,7 +481,8 @@ onMounted(refreshAll);
 }
 
 @media (max-width: 768px) {
-  .section-head {
+  .section-head,
+  .history-card-head {
     flex-direction: column;
   }
 

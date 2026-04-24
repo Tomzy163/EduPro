@@ -6,6 +6,7 @@ import {
   getSubscriptionSnapshot,
   hasPlanFeature,
 } from "../utils/subscription.js";
+import { syncLatestDatabaseBackup } from "../utils/databaseBackup.js";
 
 const syncExpiredTrial = async (school) => {
   const snapshot = getSubscriptionSnapshot(school);
@@ -13,6 +14,7 @@ const syncExpiredTrial = async (school) => {
   if (snapshot.status === "expired" && school.subscriptionStatus !== "expired") {
     school.subscriptionStatus = "expired";
     await school.save();
+    await syncLatestDatabaseBackup({ reason: "subscription-expired" });
   }
 
   return snapshot;

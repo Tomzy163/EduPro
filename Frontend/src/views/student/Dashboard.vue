@@ -3,8 +3,8 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import Chart from "chart.js/auto";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import Navbar from "@/components/Navbar.vue";
 import Notifications from "@/components/Notifications.vue";
+import PlanFeatureGate from "@/components/PlanFeatureGate.vue";
 import ProfileManager from "@/components/ProfileManager.vue";
 import PerformanceChart from "@/components/PerformanceChart.vue";
 import AttendanceChart from "@/components/AttendanceChart.vue";
@@ -12,31 +12,22 @@ import SchoolAccountCard from "@/components/SchoolAccountCard.vue";
 import UserTimetable from "@/components/UserTimetable.vue";
 import { getStudentResults } from "@/services/resultService";
 import { getAttendance } from "@/services/attendanceService";
+import { getMySchool } from "@/services/schoolService";
+import { addSchoolBranding } from "@/utils/pdfBranding";
+import { useAuthStore } from "@/store/authStore";
 import socket from "@/socket";
 
+const auth = useAuthStore();
 const results = ref([]);
 const attendance = ref([]);
 const search = ref("");
 const filterGrade = ref("");
 const chartCanvas = ref(null);
+const schoolData = ref(auth.school || null);
 
 let trendChart = null;
 
-const user = (() => {
-  try {
-    return JSON.parse(sessionStorage.getItem("user")) || {};
-  } catch {
-    return {};
-  }
-})();
-
-const school = (() => {
-  try {
-    return JSON.parse(sessionStorage.getItem("school"));
-  } catch {
-    return null;
-  }
-})();
+const user = computed(() => auth.user || {});
 
 const filteredResults = computed(() =>
   results.value.filter((result) => {
@@ -132,32 +123,46 @@ const renderTrendChart = () => {
   });
 };
 
+const fetchSchool = async () => {
+  try {
+    const response = await getMySchool();
+    schoolData.value = response.school;
+    auth.updateSchool(response.school);
+  } catch (error) {
+    console.error("Failed to load school profile:", error);
+  }
+};
+
 const fetchData = async () => {
-  if (!user?._id) return;
+  if (!user.value?._id) return;
 
   try {
-    results.value = await getStudentResults(user._id);
-    attendance.value = await getAttendance(user._id);
+    const [school, studentResults, studentAttendance] = await Promise.all([
+      getMySchool(),
+      getStudentResults(user.value._id),
+      getAttendance(user.value._id),
+    ]);
+
+    schoolData.value = school.school;
+    auth.updateSchool(school.school);
+    results.value = studentResults;
+    attendance.value = studentAttendance;
   } catch (error) {
     console.error("Failed to load student dashboard data:", error);
   }
 };
 
-const downloadReportCard = () => {
+const downloadReportCard = async () => {
   const doc = new jsPDF();
-  const schoolName =
-    school?.name || user?.school || "EduPro International School";
-
-  doc.setFontSize(20);
-  doc.text(schoolName, 14, 18);
-  doc.setFontSize(14);
-  doc.text("Student Report Card", 14, 28);
-  doc.setFontSize(11);
-  doc.text(`Student: ${user.name || "Student"}`, 14, 38);
-  doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 45);
+  const startY = await addSchoolBranding({
+    doc,
+    school: schoolData.value,
+    title: "Student Report Card",
+    subtitle: `${user.value.name || "Student"} academic summary`,
+  });
 
   autoTable(doc, {
-    startY: 52,
+    startY,
     head: [["Course", "Score", "Grade"]],
     body: results.value.map((result) => [
       result.course?.name || "Untitled Course",
@@ -166,7 +171,7 @@ const downloadReportCard = () => {
     ]),
   });
 
-  const finalY = doc.lastAutoTable?.finalY || 70;
+  const finalY = doc.lastAutoTable?.finalY || startY + 20;
   doc.text(`Average Score: ${averageScore.value}`, 14, finalY + 12);
   doc.text(`GPA: ${gpa.value}`, 14, finalY + 20);
   doc.text(`Remark: ${remark.value}`, 14, finalY + 28);
@@ -185,6 +190,7 @@ watch(results, renderTrendChart, { deep: true });
 
 onMounted(async () => {
   await fetchData();
+  await fetchSchool();
   renderTrendChart();
   socket.on("newMessage", handleIncomingMessage);
   socket.on("admin:update", handleDataUpdate);
@@ -203,8 +209,6 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <Navbar />
-
   <div class="dashboard student-dashboard">
     <header class="dashboard-header">
       <div>
@@ -236,8 +240,26 @@ onUnmounted(() => {
       </div>
     </section>
 
+    <PlanFeatureGate
+      feature="ai_student_tutor"
+      title="AI Student Tutor"
+      copy="Ask subject questions, get class-level explanations, and revisit saved tutor chats."
+    >
+      <section class="card panel ai-launchpad">
+        <div>
+          <h2 class="section-title">AI Tutor Ready</h2>
+          <p class="section-copy">
+            Use the new academic assistant for maths, science, grammar, coding, and homework support.
+          </p>
+        </div>
+        <router-link to="/dashboard/student/ai-tutor" class="btn btn-primary">
+          Open AI Tutor
+        </router-link>
+      </section>
+    </PlanFeatureGate>
+
     <SchoolAccountCard
-      :school="school"
+      :school="schoolData"
       title="School Fee Account"
       subtitle="These are the admin-approved school account details available to students."
     />
@@ -388,6 +410,13 @@ onUnmounted(() => {
   min-height: 320px;
 }
 
+.ai-launchpad {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+}
+
 .remark-pill {
   padding: 10px 14px;
   border-radius: 999px;
@@ -472,7 +501,8 @@ onUnmounted(() => {
 
 @media (max-width: 768px) {
   .dashboard-header,
-  .section-head {
+  .section-head,
+  .ai-launchpad {
     flex-direction: column;
   }
 }

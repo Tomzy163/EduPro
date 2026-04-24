@@ -11,6 +11,11 @@ const paymentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    student: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
 
     amount: Number,
 
@@ -27,6 +32,31 @@ const paymentSchema = new mongoose.Schema(
     },
 
     receipt: String,
+    receiptNumber: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    studentNameSnapshot: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    schoolNameSnapshot: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    schoolCodeSnapshot: {
+      type: String,
+      default: "",
+      trim: true,
+    },
 
     gateway: {
       type: String,
@@ -117,7 +147,9 @@ const paymentSchema = new mongoose.Schema(
 );
 
 paymentSchema.index({ school: 1, user: 1, createdAt: -1 });
+paymentSchema.index({ school: 1, student: 1, createdAt: -1 });
 paymentSchema.index({ school: 1, status: 1, createdAt: -1 });
 paymentSchema.index({ reference: 1 }, { unique: true, sparse: true });
+paymentSchema.index({ receiptNumber: 1 }, { sparse: true });
 
 export default mongoose.model("Payment", paymentSchema);

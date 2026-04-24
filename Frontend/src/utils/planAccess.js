@@ -5,6 +5,7 @@ const PLAN_FEATURES = {
     "timetable_setup",
     "attendance_tracking",
     "result_tracking",
+    "ai_student_tutor",
   ],
   supreme: [
     "user_management",
@@ -14,6 +15,11 @@ const PLAN_FEATURES = {
     "result_tracking",
     "priority_communication",
     "reporting_workflow",
+    "ai_student_tutor",
+    "ai_exam_generator",
+    "ai_report_comments",
+    "ai_admin_analytics",
+    "ai_parent_assistant",
   ],
   gold: [
     "user_management",
@@ -25,6 +31,11 @@ const PLAN_FEATURES = {
     "reporting_workflow",
     "high_volume_operations",
     "advanced_monitoring",
+    "ai_student_tutor",
+    "ai_exam_generator",
+    "ai_report_comments",
+    "ai_admin_analytics",
+    "ai_parent_assistant",
   ],
   platinum: [
     "user_management",
@@ -37,6 +48,11 @@ const PLAN_FEATURES = {
     "high_volume_operations",
     "advanced_monitoring",
     "maximum_platform_access",
+    "ai_student_tutor",
+    "ai_exam_generator",
+    "ai_report_comments",
+    "ai_admin_analytics",
+    "ai_parent_assistant",
   ],
 };
 
@@ -51,6 +67,11 @@ export const FEATURE_LABELS = {
   high_volume_operations: "High-volume operations",
   advanced_monitoring: "Advanced monitoring",
   maximum_platform_access: "Maximum platform access",
+  ai_student_tutor: "AI Student Tutor",
+  ai_exam_generator: "AI Exam Generator",
+  ai_report_comments: "AI Report Comments",
+  ai_admin_analytics: "AI Admin Analytics",
+  ai_parent_assistant: "Parent AI Assistant",
 };
 
 export const FEATURE_REQUIRED_PLAN = {
@@ -64,6 +85,11 @@ export const FEATURE_REQUIRED_PLAN = {
   high_volume_operations: "Gold Plan",
   advanced_monitoring: "Gold Plan",
   maximum_platform_access: "Platinum Plan",
+  ai_student_tutor: "Basic Plan",
+  ai_exam_generator: "Premium Plan",
+  ai_report_comments: "Premium Plan",
+  ai_admin_analytics: "Premium Plan",
+  ai_parent_assistant: "Premium Plan",
 };
 
 export const getPlanFeatures = (subscription = null) => {
@@ -74,7 +100,7 @@ export const getPlanFeatures = (subscription = null) => {
   const plan = String(subscription?.plan || "trial").toLowerCase();
 
   if (plan === "trial") {
-    return PLAN_FEATURES.platinum;
+    return PLAN_FEATURES.normal;
   }
 
   return PLAN_FEATURES[plan] || PLAN_FEATURES.normal;

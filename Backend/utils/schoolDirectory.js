@@ -1,12 +1,17 @@
+import fs from "fs/promises";
+import path from "path";
 import School from "../models/School.js";
 import User from "../models/User.js";
 import {
   escapeRegex,
   generateSchoolCodeCandidate,
+  generateStableSchoolCodeCandidate,
   normalizeSchoolAliases,
   normalizeSchoolCode,
   normalizeSchoolName,
 } from "./schoolIdentity.js";
+
+const LATEST_BACKUP_PATH = path.resolve(process.cwd(), "backups", "mongo", "latest.json");
 
 const buildIdentifierQuery = (identifier = "") => {
   const trimmedIdentifier = String(identifier || "").trim().replace(/\s+/g, " ");
@@ -43,14 +48,71 @@ export const findSchoolByIdentifier = async (identifier = "") => {
   return School.findOne(query);
 };
 
-export const generateUniqueSchoolCode = async (schoolName = "") => {
-  let schoolCode = "";
+const findLatestBackupSchoolCode = async ({ schoolId = "", schoolName = "" } = {}) => {
+  try {
+    const raw = await fs.readFile(LATEST_BACKUP_PATH, "utf8");
+    const backup = JSON.parse(raw);
+    const schools = Array.isArray(backup?.data?.schools) ? backup.data.schools : [];
+    const normalizedName = normalizeSchoolName(schoolName);
 
-  do {
-    schoolCode = generateSchoolCodeCandidate(schoolName);
-  } while (await School.exists({ schoolCode }));
+    const matchedSchool = schools.find((entry) => {
+      const backupSchoolId = String(entry?._id || "").trim();
+      const backupNormalizedName = normalizeSchoolName(
+        entry?.normalizedName || entry?.name || ""
+      );
+      const backupAliases = Array.isArray(entry?.aliasesNormalized)
+        ? entry.aliasesNormalized.map((alias) => normalizeSchoolName(alias))
+        : [];
 
-  return schoolCode;
+      return (
+        (schoolId && backupSchoolId === String(schoolId)) ||
+        backupNormalizedName === normalizedName ||
+        backupAliases.includes(normalizedName)
+      );
+    });
+
+    return normalizeSchoolCode(matchedSchool?.schoolCode || "");
+  } catch {
+    return "";
+  }
+};
+
+export const generateUniqueSchoolCode = async (
+  schoolName = "",
+  { seed = "", preferredCode = "", excludeSchoolId = "" } = {}
+) => {
+  const normalizedPreferredCode = normalizeSchoolCode(preferredCode);
+
+  if (normalizedPreferredCode) {
+    const existingSchool = await School.findOne({
+      schoolCode: normalizedPreferredCode,
+    }).select("_id");
+
+    if (
+      !existingSchool ||
+      String(existingSchool._id) === String(excludeSchoolId || "")
+    ) {
+      return normalizedPreferredCode;
+    }
+  }
+
+  let attempt = 0;
+
+  while (true) {
+    const schoolCode = seed
+      ? generateStableSchoolCodeCandidate(schoolName, `${seed}:${attempt}`)
+      : generateSchoolCodeCandidate(schoolName);
+    const existingSchool = await School.findOne({ schoolCode }).select("_id");
+
+    if (
+      !existingSchool ||
+      String(existingSchool._id) === String(excludeSchoolId || "")
+    ) {
+      return schoolCode;
+    }
+
+    attempt += 1;
+  }
 };
 
 export const appendSchoolAlias = (school, alias = "") => {
@@ -73,7 +135,16 @@ export const ensureSchoolIdentityBackfill = async () => {
     }
 
     if (!school.schoolCode) {
-      school.schoolCode = await generateUniqueSchoolCode(school.name);
+      const backupSchoolCode = await findLatestBackupSchoolCode({
+        schoolId: school._id,
+        schoolName: school.name,
+      });
+
+      school.schoolCode = await generateUniqueSchoolCode(school.name, {
+        seed: school._id.toString(),
+        preferredCode: backupSchoolCode,
+        excludeSchoolId: school._id,
+      });
       changed = true;
     }
 
@@ -115,6 +186,11 @@ export const resolveSchoolForLogin = async ({
         resolvedBy: "identifier",
       };
     }
+
+    return {
+      school: null,
+      resolvedBy: "identifier-not-found",
+    };
   }
 
   if (!normalizedEmail) {

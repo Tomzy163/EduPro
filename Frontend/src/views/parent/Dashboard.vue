@@ -5,16 +5,23 @@ import autoTable from "jspdf-autotable";
 import API from "../../services/api";
 import { createPayment, getMyPayments } from "../../services/paymentService";
 import { getAttendance } from "../../services/attendanceService";
-import Navbar from "@/components/Navbar.vue";
 import Notifications from "@/components/Notifications.vue";
+import PlanFeatureGate from "@/components/PlanFeatureGate.vue";
 import ProfileManager from "@/components/ProfileManager.vue";
 import SchoolAccountCard from "@/components/SchoolAccountCard.vue";
 import socket from "@/socket";
+import { useAuthStore } from "@/store/authStore";
+import { useUiStore } from "@/store/uiStore";
+import { getMySchool } from "@/services/schoolService";
+import { exportPaymentReceiptPdf } from "@/utils/paymentReceiptExport";
+import { addSchoolBranding } from "@/utils/pdfBranding";
 import {
   exportTimetablePdf,
   sortTimetableSlots,
 } from "@/utils/timetableExport";
 
+const auth = useAuthStore();
+const ui = useUiStore();
 const children = ref([]);
 const selectedChild = ref("");
 const results = ref([]);
@@ -27,22 +34,9 @@ const fileInputKey = ref(0);
 const loading = ref(false);
 const statusMessage = ref("");
 const statusTone = ref("primary");
+const schoolData = ref(auth.school || null);
 
-const user = (() => {
-  try {
-    return JSON.parse(sessionStorage.getItem("user")) || {};
-  } catch {
-    return {};
-  }
-})();
-
-const school = (() => {
-  try {
-    return JSON.parse(sessionStorage.getItem("school"));
-  } catch {
-    return null;
-  }
-})();
+const user = computed(() => auth.user || {});
 
 const selectedChildName = computed(() => {
   return children.value.find((child) => child._id === selectedChild.value)?.name || "Selected child";
@@ -87,12 +81,22 @@ const showStatus = (message, tone = "primary") => {
   statusTone.value = tone;
 };
 
+const fetchSchool = async () => {
+  try {
+    const response = await getMySchool();
+    schoolData.value = response.school;
+    auth.updateSchool(response.school);
+  } catch (error) {
+    console.error("Failed to load school details:", error);
+  }
+};
+
 const fetchChildren = async () => {
-  if (!user._id) {
+  if (!user.value?._id) {
     return;
   }
 
-  const res = await API.get(`/relationships/parent/${user._id}`);
+  const res = await API.get(`/relationships/parent/${user.value._id}`);
   children.value = res.data?.children || [];
 
   const stillExists = children.value.some((child) => child._id === selectedChild.value);
@@ -124,9 +128,7 @@ const getResults = async () => {
 };
 
 const refreshDashboard = async () => {
-  await fetchChildren();
-  await fetchPayments();
-  await fetchTimetable();
+  await Promise.all([fetchSchool(), fetchChildren(), fetchPayments(), fetchTimetable()]);
 
   if (selectedChild.value) {
     await getResults();
@@ -138,6 +140,11 @@ const handleFile = (event) => {
 };
 
 const submitPayment = async () => {
+  if (!selectedChild.value) {
+    showStatus("Select the child this payment belongs to.", "danger");
+    return;
+  }
+
   if (!amount.value || !receipt.value) {
     showStatus("Enter an amount and upload a receipt.", "danger");
     return;
@@ -150,6 +157,7 @@ const submitPayment = async () => {
     const formData = new FormData();
     formData.append("amount", amount.value);
     formData.append("receipt", receipt.value);
+    formData.append("studentId", selectedChild.value);
 
     await createPayment(formData);
     amount.value = "";
@@ -169,7 +177,11 @@ const submitPayment = async () => {
 
 const handleMessage = (message) => {
   if (message?.title) {
-    alert(message.title);
+    ui.pushToast({
+      title: "New notice",
+      message: message.title,
+      tone: "info",
+    });
   }
 };
 
@@ -183,27 +195,23 @@ const handleAcademicUpdate = async () => {
   }
 };
 
-const downloadChildResult = () => {
+const downloadChildResult = async () => {
   if (!selectedChild.value || results.value.length === 0) {
     showStatus("Select a child with available results before downloading.", "danger");
     return;
   }
 
   const doc = new jsPDF();
-  const schoolName =
-    school?.name || user?.school?.name || user?.school || "EduPro International School";
-
-  doc.setFontSize(20);
-  doc.text(schoolName, 14, 18);
-  doc.setFontSize(14);
-  doc.text("Parent Result Copy", 14, 28);
-  doc.setFontSize(11);
-  doc.text(`Parent: ${user.name || "Parent"}`, 14, 38);
-  doc.text(`Student: ${selectedChildName.value}`, 14, 45);
-  doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 52);
+  const startY = await addSchoolBranding({
+    doc,
+    school: schoolData.value,
+    title: "Parent Result Copy",
+    subtitle: `${selectedChildName.value} academic result report`,
+    metaLines: [`Parent: ${user.value.name || "Parent"}`],
+  });
 
   autoTable(doc, {
-    startY: 60,
+    startY,
     head: [["Course", "Score", "Grade", "Teacher", "Date"]],
     body: results.value.map((result) => [
       result.course?.name || "Untitled Course",
@@ -214,39 +222,49 @@ const downloadChildResult = () => {
     ]),
   });
 
-  const finalY = doc.lastAutoTable?.finalY || 80;
+  const finalY = doc.lastAutoTable?.finalY || startY + 20;
   doc.text(`Average Score: ${averageScore.value}`, 14, finalY + 12);
   doc.text(`Remark: ${resultRemark.value}`, 14, finalY + 20);
   doc.save(`${selectedChildName.value.replace(/\s+/g, "-").toLowerCase()}-result.pdf`);
 };
 
-const downloadSelectedTimetablePdf = () => {
+const downloadSelectedTimetablePdf = async () => {
   if (!selectedChild.value || selectedChildTimetable.value.length === 0) {
     showStatus("Select a child with timetable records before downloading.", "danger");
     return;
   }
 
-  exportTimetablePdf({
+  await exportTimetablePdf({
     slots: selectedChildTimetable.value,
-    schoolName: school?.name || user?.school || "EduPro School",
+    school: schoolData.value,
+    schoolName: schoolData.value?.name || user.value?.school || "EduPro School",
     title: `${selectedChildName.value} Timetable`,
-    subtitle: `Parent copy generated for ${user.name || "Parent"}`,
+    subtitle: `Parent copy generated for ${user.value.name || "Parent"}`,
     fileName: `${selectedChildName.value.replace(/\s+/g, "-").toLowerCase()}-timetable.pdf`,
   });
 };
 
-const downloadAllTimetables = () => {
+const downloadAllTimetables = async () => {
   if (!timetable.value.length) {
     showStatus("No linked student timetable is available yet.", "danger");
     return;
   }
 
-  exportTimetablePdf({
+  await exportTimetablePdf({
     slots: timetable.value,
-    schoolName: school?.name || user?.school || "EduPro School",
+    school: schoolData.value,
+    schoolName: schoolData.value?.name || user.value?.school || "EduPro School",
     title: "All Linked Children Timetables",
-    subtitle: `Parent copy generated for ${user.name || "Parent"}`,
-    fileName: `${(user.name || "parent").replace(/\s+/g, "-").toLowerCase()}-children-timetables.pdf`,
+    subtitle: `Parent copy generated for ${user.value.name || "Parent"}`,
+    fileName: `${(user.value.name || "parent").replace(/\s+/g, "-").toLowerCase()}-children-timetables.pdf`,
+  });
+};
+
+const downloadPaymentReceipt = async (payment) => {
+  await exportPaymentReceiptPdf({
+    payment,
+    school: schoolData.value,
+    payerName: user.value.name,
   });
 };
 
@@ -261,18 +279,18 @@ onMounted(async () => {
   socket.on("newMessage", handleMessage);
   socket.on("admin:update", handleAdminUpdate);
   socket.on("academic:update", handleAcademicUpdate);
+  socket.on("paymentUpdated", fetchPayments);
 });
 
 onUnmounted(() => {
   socket.off("newMessage", handleMessage);
   socket.off("admin:update", handleAdminUpdate);
   socket.off("academic:update", handleAcademicUpdate);
+  socket.off("paymentUpdated", fetchPayments);
 });
 </script>
 
 <template>
-  <Navbar />
-
   <div class="dashboard parent-dashboard">
     <header class="dashboard-header">
       <div>
@@ -289,6 +307,24 @@ onUnmounted(() => {
     <div v-if="statusMessage" class="status-banner" :class="`status-${statusTone}`">
       {{ statusMessage }}
     </div>
+
+    <PlanFeatureGate
+      feature="ai_parent_assistant"
+      title="Parent AI Assistant"
+      copy="Ask about attendance, weak subjects, payments, and progress with live student data on the Premium plan."
+    >
+      <section class="card panel ai-launchpad">
+        <div>
+          <h2 class="section-title">Parent AI Assistant</h2>
+          <p class="section-copy">
+            Ask how your child is doing, what subjects need attention, and what activity is coming up next.
+          </p>
+        </div>
+        <router-link to="/dashboard/parent/ai-assistant" class="btn btn-primary">
+          Open Assistant
+        </router-link>
+      </section>
+    </PlanFeatureGate>
 
     <section class="grid-3 parent-summary">
       <article class="stat-card accent-slate">
@@ -314,7 +350,7 @@ onUnmounted(() => {
     </section>
 
     <SchoolAccountCard
-      :school="school"
+      :school="schoolData"
       title="School Fee Account"
       subtitle="Use these admin-approved account details when making school-fee payments."
     />
@@ -485,14 +521,20 @@ onUnmounted(() => {
           <div>
             <h2 class="section-title">Make Payment</h2>
             <p class="section-copy">
-              Upload a new payment receipt for review by the school admin.
+              Upload a new payment receipt for review by the school admin and link it to the selected child.
             </p>
           </div>
         </div>
 
         <div class="form-grid">
+          <select v-model="selectedChild" @change="getResults" class="input">
+            <option disabled value="">Select Child</option>
+            <option v-for="child in children" :key="child._id" :value="child._id">
+              {{ child.name }}
+            </option>
+          </select>
           <input v-model="amount" placeholder="Amount" type="number" class="input" />
-          <input :key="fileInputKey" type="file" @change="handleFile" class="input" />
+          <input :key="fileInputKey" type="file" accept="image/*,.pdf" @change="handleFile" class="input" />
         </div>
 
         <button @click="submitPayment" class="btn btn-primary" :disabled="loading">
@@ -518,22 +560,30 @@ onUnmounted(() => {
           <table class="table">
             <thead>
               <tr>
+                <th>Child</th>
+                <th>Receipt No</th>
                 <th>Amount</th>
                 <th>Status</th>
-                <th>Receipt</th>
                 <th>Date</th>
+                <th>Receipt</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="payment in payments" :key="payment._id">
+                <td>{{ payment.student?.name || payment.studentNameSnapshot || "-" }}</td>
+                <td>{{ payment.receiptNumber || "-" }}</td>
                 <td>{{ Number(payment.amount || 0).toLocaleString() }}</td>
                 <td>
                   <span class="badge" :class="payment.status || 'pending'">
                     {{ payment.status || "pending" }}
                   </span>
                 </td>
-                <td>{{ payment.receipt ? "Uploaded" : "No file" }}</td>
                 <td>{{ new Date(payment.createdAt).toLocaleDateString() }}</td>
+                <td>
+                  <button @click="downloadPaymentReceipt(payment)" class="btn btn-secondary">
+                    Download Receipt
+                  </button>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -577,6 +627,13 @@ onUnmounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+  align-items: center;
+}
+
+.ai-launchpad {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
   align-items: center;
 }
 
@@ -624,10 +681,16 @@ onUnmounted(() => {
   color: #991b1b;
 }
 
+.btn-secondary {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
 @media (max-width: 768px) {
   .dashboard-header,
   .section-head,
-  .result-toolbar {
+  .result-toolbar,
+  .ai-launchpad {
     flex-direction: column;
   }
 

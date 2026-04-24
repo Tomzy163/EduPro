@@ -1,8 +1,11 @@
 <script setup>
-import { computed } from "vue";
+import { computed, onMounted } from "vue";
 import { useRoute } from "vue-router";
+import AppToast from "@/components/AppToast.vue";
+import { useUiStore } from "@/store/uiStore";
 
 const route = useRoute();
+const ui = useUiStore();
 
 const authRoutes = new Set([
   "/",
@@ -12,10 +15,16 @@ const authRoutes = new Set([
 ]);
 
 const showShell = computed(() => !authRoutes.has(route.path));
+
+onMounted(() => {
+  ui.applyTheme(ui.theme);
+});
 </script>
 
 <template>
   <main class="app-shell">
+    <AppToast />
+
     <section v-if="showShell" class="dashboard-shell">
       <div class="dashboard-shell__content">
         <router-view />

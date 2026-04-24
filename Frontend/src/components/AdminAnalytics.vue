@@ -2,6 +2,7 @@
 import { onBeforeUnmount, onMounted, ref } from "vue";
 import Chart from "chart.js/auto";
 import { getDashboardSummary } from "../services/schoolService";
+import socket from "@/socket";
 
 const userChartRef = ref(null);
 const paymentChartRef = ref(null);
@@ -17,7 +18,7 @@ const stats = ref({
   revenue: 0,
 });
 
-onMounted(async () => {
+const loadSummary = async () => {
   try {
     const summary = await getDashboardSummary();
 
@@ -75,11 +76,19 @@ onMounted(async () => {
   } catch (error) {
     console.error("Failed to load admin analytics:", error);
   }
+};
+
+onMounted(async () => {
+  await loadSummary();
+  socket.on("paymentUpdated", loadSummary);
+  socket.on("subscriptionUpdated", loadSummary);
 });
 
 onBeforeUnmount(() => {
   if (userChart) userChart.destroy();
   if (paymentChart) paymentChart.destroy();
+  socket.off("paymentUpdated", loadSummary);
+  socket.off("subscriptionUpdated", loadSummary);
 });
 </script>
 

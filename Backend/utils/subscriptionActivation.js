@@ -3,6 +3,7 @@ import School from "../models/School.js";
 import User from "../models/User.js";
 import { sendEmail } from "./mailer.js";
 import { sendSms } from "./sms.js";
+import { syncLatestDatabaseBackup } from "./databaseBackup.js";
 import {
   SUBSCRIPTION_PLANS,
   getSubscriptionDurationDays,
@@ -61,6 +62,7 @@ export const activateSubscriptionFromPayment = async ({
     }).select("name email phoneNumber role"));
 
   const now = new Date();
+  const activationTime = paidAt ? new Date(paidAt) : now;
   const activeUntil = school.subscriptionEndsAt
     ? new Date(school.subscriptionEndsAt)
     : null;
@@ -112,18 +114,23 @@ export const activateSubscriptionFromPayment = async ({
 
   if (shouldActivate && status === "success") {
     const durationMs = getSubscriptionDurationDays() * DAY_IN_MS;
-    const nextExpiry = new Date(now.getTime() + durationMs);
+    const nextExpiry = new Date(activationTime.getTime() + durationMs);
 
     school.currentPlan = plan;
     school.subscriptionStatus = "active";
-    school.subscriptionStartedAt = now;
+    school.subscriptionStartedAt = activationTime;
     school.subscriptionEndsAt = nextExpiry;
-    school.subscribedAt = now;
+    school.subscribedAt = activationTime;
+    school.trialEndsAt = activationTime;
 
     await school.save();
   }
 
   await payment.save();
+
+  if (shouldActivate && status === "success") {
+    await syncLatestDatabaseBackup({ reason: "subscription-activation" });
+  }
 
   const subscription = getSubscriptionSnapshot(school);
 

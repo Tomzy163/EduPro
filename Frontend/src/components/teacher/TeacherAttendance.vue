@@ -8,8 +8,11 @@ import {
   markAttendance,
 } from "@/services/attendanceService";
 import { getCourses } from "@/services/courseService";
+import { addSchoolBranding } from "@/utils/pdfBranding";
+import { useAuthStore } from "@/store/authStore";
 import socket from "@/socket";
 
+const auth = useAuthStore();
 const students = ref([]);
 const courses = ref([]);
 const attendance = ref([]);
@@ -17,6 +20,8 @@ const attendance = ref([]);
 const student = ref("");
 const course = ref("");
 const status = ref("present");
+
+const school = computed(() => auth.school || {});
 
 const attendanceRows = computed(() =>
   attendance.value.map((record) => ({
@@ -90,18 +95,22 @@ const downloadAttendanceExcel = () => {
   XLSX.writeFile(workbook, "teacher-attendance.xlsx");
 };
 
-const downloadAttendancePdf = () => {
+const downloadAttendancePdf = async () => {
   if (attendanceRows.value.length === 0) {
     alert("No attendance records are available to download.");
     return;
   }
 
   const doc = new jsPDF();
-  doc.setFontSize(16);
-  doc.text("Attendance Report", 14, 18);
+  const startY = await addSchoolBranding({
+    doc,
+    school: school.value,
+    title: "Attendance Report",
+    subtitle: "Teacher export",
+  });
 
   autoTable(doc, {
-    startY: 28,
+    startY,
     head: [["Student", "Course", "Status", "Date"]],
     body: attendanceRows.value.map((row) => [
       row.student,
@@ -117,10 +126,12 @@ const downloadAttendancePdf = () => {
 onMounted(() => {
   fetchAll();
   socket.on("admin:update", fetchAll);
+  socket.on("academic:update", fetchAll);
 });
 
 onUnmounted(() => {
   socket.off("admin:update", fetchAll);
+  socket.off("academic:update", fetchAll);
 });
 </script>
 

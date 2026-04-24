@@ -1,24 +1,46 @@
 <script setup>
 import { computed } from "vue";
-import { useAuthStore } from "../store/authStore";
+import { useRoute } from "vue-router";
+import ThemeToggle from "@/components/ThemeToggle.vue";
+import { useAuthStore } from "@/store/authStore";
+
+defineEmits(["toggle-sidebar"]);
 
 const auth = useAuthStore();
+const route = useRoute();
 
-const schoolName = computed(() => auth.user?.school || "EduPro");
+const schoolName = computed(() => auth.school?.name || auth.user?.school || "EduPro");
+const portalName = computed(() => auth.school?.portalName || "EduPro");
 const displayName = computed(() => auth.user?.name || "User");
+const pageTitle = computed(() => route.meta?.title || "Dashboard");
+const brandStyle = computed(() => ({
+  background: `linear-gradient(135deg, ${auth.school?.primaryColor || "#0f766e"}, ${auth.school?.accentColor || "#1d4ed8"})`,
+}));
 </script>
 
 <template>
   <header class="navbar">
-    <div class="brand">
-      <span class="brand-mark">EP</span>
-      <div>
-        <h1 class="brand-title">EduPro</h1>
-        <p class="brand-subtitle">{{ schoolName }}</p>
+    <div class="nav-leading">
+      <button type="button" class="menu-toggle" @click="$emit('toggle-sidebar')">
+        Menu
+      </button>
+
+      <div class="brand">
+        <span class="brand-mark" :style="brandStyle">EP</span>
+        <div>
+          <h1 class="brand-title">{{ portalName }}</h1>
+          <p class="brand-subtitle">{{ schoolName }}</p>
+        </div>
       </div>
     </div>
 
+    <div class="nav-center">
+      <span class="nav-label">Current workspace</span>
+      <strong>{{ pageTitle }}</strong>
+    </div>
+
     <div class="user-actions">
+      <ThemeToggle />
       <div class="user-copy">
         <span class="welcome-label">Signed in as</span>
         <strong>{{ displayName }}</strong>
@@ -30,17 +52,37 @@ const displayName = computed(() => auth.user?.name || "User");
 
 <style scoped>
 .navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+  align-items: center;
   padding: 18px 24px;
-  margin: 0 24px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  margin: 20px 24px 0;
+  border: 1px solid var(--line);
+  border-radius: 26px;
+  background: var(--surface);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow-soft);
+}
+
+.nav-leading,
+.user-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.nav-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.nav-label,
+.welcome-label,
+.brand-subtitle {
+  color: var(--text-soft);
+  font-size: 0.82rem;
 }
 
 .brand {
@@ -66,23 +108,8 @@ const displayName = computed(() => auth.user?.name || "User");
 .brand-title {
   margin: 0;
   font-family: "Outfit", sans-serif;
-  font-size: 1.4rem;
+  font-size: 1.35rem;
   font-weight: 800;
-}
-
-.brand-subtitle {
-  margin: 4px 0 0;
-  color: #5f728c;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
-.user-actions {
-  display: flex;
-  align-items: center;
-  gap: 14px;
 }
 
 .user-copy {
@@ -91,31 +118,43 @@ const displayName = computed(() => auth.user?.name || "User");
   align-items: flex-end;
 }
 
-.welcome-label {
-  color: #5f728c;
-  font-size: 0.82rem;
-}
-
-.logout-btn {
+.logout-btn,
+.menu-toggle {
   border: none;
   border-radius: 999px;
-  background: #dc2626;
-  color: #fff;
-  padding: 11px 18px;
+  padding: 11px 16px;
   font-weight: 700;
 }
 
-@media (max-width: 768px) {
+.logout-btn {
+  background: #dc2626;
+  color: #fff;
+}
+
+.menu-toggle {
+  display: none;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--text-main);
+}
+
+@media (max-width: 960px) {
   .navbar {
-    margin: 0 16px;
+    grid-template-columns: 1fr;
+    margin: 16px;
     padding: 16px;
-    flex-direction: column;
+  }
+
+  .nav-center,
+  .user-copy {
     align-items: flex-start;
   }
 
-  .user-actions,
-  .user-copy {
-    align-items: flex-start;
+  .menu-toggle {
+    display: inline-flex;
+  }
+
+  .user-actions {
+    flex-wrap: wrap;
   }
 }
 </style>

@@ -1,15 +1,21 @@
 import { createRouter, createWebHistory } from "vue-router";
 
-import Login from "../views/Login.vue";
-import Register from "../views/Register.vue";
-import ForgotPassword from "../views/ForgotPassword.vue";
-import ResetPassword from "../views/ResetPassword.vue";
-import SubscriptionView from "../views/Subscription.vue";
+const Login = () => import("../views/Login.vue");
+const Register = () => import("../views/Register.vue");
+const ForgotPassword = () => import("../views/ForgotPassword.vue");
+const ResetPassword = () => import("../views/ResetPassword.vue");
+const SubscriptionView = () => import("../views/Subscription.vue");
+const DashboardLayout = () => import("../layouts/DashboardLayout.vue");
 
-import AdminDashboard from "../views/admin/Dashboard.vue";
-import TeacherDashboard from "../views/teacher/Dashboard.vue";
-import StudentDashboard from "../views/student/Dashboard.vue";
-import ParentDashboard from "../views/parent/Dashboard.vue";
+const AdminDashboard = () => import("../views/admin/Dashboard.vue");
+const AdminAIInsights = () => import("../views/admin/AIInsights.vue");
+const TeacherDashboard = () => import("../views/teacher/Dashboard.vue");
+const TeacherExamGenerator = () => import("../views/teacher/ExamGenerator.vue");
+const StudentDashboard = () => import("../views/student/Dashboard.vue");
+const StudentAITutor = () => import("../views/student/AITutor.vue");
+const ParentDashboard = () => import("../views/parent/Dashboard.vue");
+const ParentAIAssistant = () => import("../views/parent/AIAssistant.vue");
+const ReportCommentsView = () => import("../views/shared/ReportComments.vue");
 
 const routes = [
   { path: "/", component: Login },
@@ -22,24 +28,61 @@ const routes = [
     meta: { requiresAuth: true, role: "admin" },
   },
   {
-    path: "/dashboard/admin",
-    component: AdminDashboard,
-    meta: { requiresAuth: true, role: "admin" },
-  },
-  {
-    path: "/dashboard/teacher",
-    component: TeacherDashboard,
-    meta: { requiresAuth: true, role: "teacher" },
-  },
-  {
-    path: "/dashboard/student",
-    component: StudentDashboard,
-    meta: { requiresAuth: true, role: "student" },
-  },
-  {
-    path: "/dashboard/parent",
-    component: ParentDashboard,
-    meta: { requiresAuth: true, role: "parent" },
+    path: "/dashboard",
+    component: DashboardLayout,
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: "admin",
+        component: AdminDashboard,
+        meta: { requiresAuth: true, role: "admin", title: "Admin Dashboard" },
+      },
+      {
+        path: "admin/ai-insights",
+        component: AdminAIInsights,
+        meta: { requiresAuth: true, role: "admin", title: "AI Admin Analytics" },
+      },
+      {
+        path: "admin/report-comments",
+        component: ReportCommentsView,
+        meta: { requiresAuth: true, role: "admin", title: "Report Comments" },
+      },
+      {
+        path: "teacher",
+        component: TeacherDashboard,
+        meta: { requiresAuth: true, role: "teacher", title: "Teacher Dashboard" },
+      },
+      {
+        path: "teacher/exam-generator",
+        component: TeacherExamGenerator,
+        meta: { requiresAuth: true, role: "teacher", title: "Exam Generator" },
+      },
+      {
+        path: "teacher/report-comments",
+        component: ReportCommentsView,
+        meta: { requiresAuth: true, role: "teacher", title: "Report Comments" },
+      },
+      {
+        path: "student",
+        component: StudentDashboard,
+        meta: { requiresAuth: true, role: "student", title: "Student Dashboard" },
+      },
+      {
+        path: "student/ai-tutor",
+        component: StudentAITutor,
+        meta: { requiresAuth: true, role: "student", title: "AI Tutor" },
+      },
+      {
+        path: "parent",
+        component: ParentDashboard,
+        meta: { requiresAuth: true, role: "parent", title: "Parent Dashboard" },
+      },
+      {
+        path: "parent/ai-assistant",
+        component: ParentAIAssistant,
+        meta: { requiresAuth: true, role: "parent", title: "Parent Assistant" },
+      },
+    ],
   },
   { path: "/:pathMatch(.*)*", redirect: "/" },
 ];
@@ -56,6 +99,21 @@ const getSafeStoredUser = () => {
   } catch {
     return null;
   }
+};
+
+const getSafeStoredSchool = () => {
+  try {
+    const rawSchool = sessionStorage.getItem("school");
+    return rawSchool ? JSON.parse(rawSchool) : null;
+  } catch {
+    return null;
+  }
+};
+
+const clearStoredSession = () => {
+  sessionStorage.removeItem("user");
+  sessionStorage.removeItem("school");
+  sessionStorage.removeItem("token");
 };
 
 const getDashboardRouteForRole = (role) => {
@@ -75,6 +133,7 @@ const getDashboardRouteForRole = (role) => {
 
 router.beforeEach((to, _from, next) => {
   const user = getSafeStoredUser();
+  const school = getSafeStoredSchool();
   const token = sessionStorage.getItem("token");
 
   if (to.meta.requiresAuth && (!token || !user)) {
@@ -85,11 +144,18 @@ router.beforeEach((to, _from, next) => {
     return next(getDashboardRouteForRole(user?.role));
   }
 
-  if (user?.role === "admin") {
-    const limitedAccess = Boolean(user.subscription?.limitedAccess);
+  const limitedAccess = Boolean(
+    user?.subscription?.limitedAccess || school?.subscription?.limitedAccess
+  );
 
-    if (limitedAccess && to.path !== "/subscription") {
-      return next("/subscription");
+  if (limitedAccess) {
+    if (user?.role === "admin") {
+      if (to.path !== "/subscription") {
+        return next("/subscription");
+      }
+    } else {
+      clearStoredSession();
+      return next("/");
     }
   }
 

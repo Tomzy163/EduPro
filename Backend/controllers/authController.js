@@ -5,7 +5,11 @@ import crypto from "crypto";
 import School from "../models/School.js";
 import Payment from "../models/Payment.js";
 import { SUBSCRIPTION_PLANS, getSubscriptionSnapshot } from "../utils/subscription.js";
-import { isMailerConfigured, sendPasswordResetEmail } from "../utils/mailer.js";
+import {
+  isMailerConfigured,
+  sendPasswordResetEmail,
+  sendSchoolLoginCodeEmail,
+} from "../utils/mailer.js";
 import { sendSms } from "../utils/sms.js";
 import {
   findSchoolByIdentifier,
@@ -22,18 +26,30 @@ import {
   activateSubscriptionFromPayment,
   isValidSubscriptionPlan,
 } from "../utils/subscriptionActivation.js";
+import { syncLatestDatabaseBackup } from "../utils/databaseBackup.js";
+import {
+  hasMinimumPasswordLength,
+  isValidEmail,
+  normalizeDisplayName,
+  normalizeEmail,
+  normalizePhoneNumber,
+  normalizePlanValue,
+} from "../utils/validation.js";
+import { createAuditLog } from "../utils/auditLogger.js";
 
-const normalizePhoneNumber = (value = "") => String(value || "").trim();
 const SUBSCRIPTION_CURRENCY = process.env.PAYSTACK_CURRENCY || "NGN";
 const PAYSTACK_SUCCESS_STATUSES = new Set(["success", "successful"]);
 const isPaystackConfigured = () => Boolean(process.env.PAYSTACK_SECRET_KEY);
+const JWT_ISSUER = process.env.JWT_ISSUER || "edupro-api";
+const JWT_AUDIENCE = process.env.JWT_AUDIENCE || "edupro-web";
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 
 const resolveServerBaseUrl = () =>
   (process.env.SERVER_URL ||
     process.env.API_BASE_URL ||
     `http://localhost:${process.env.PORT || 5000}`).replace(/\/+$/, "");
 
-const normalizePlan = (value = "") => String(value || "").trim().toLowerCase();
+const normalizePlan = (value = "") => normalizePlanValue(value);
 
 const syncExpiredSubscription = async (school) => {
   const subscription = getSubscriptionSnapshot(school);
@@ -41,6 +57,7 @@ const syncExpiredSubscription = async (school) => {
   if (!subscription.hasAppAccess && school.subscriptionStatus !== "expired") {
     school.subscriptionStatus = "expired";
     await school.save();
+    await syncLatestDatabaseBackup({ reason: "subscription-expired" });
   }
 
   return subscription;
@@ -97,9 +114,15 @@ const generateToken = (user) => {
       id: user._id,
       role: user.role,
       school: user.school,
+      schoolId: user.school,
     },
     process.env.JWT_SECRET,
-    { expiresIn: "7d" }
+    {
+      expiresIn: JWT_EXPIRES_IN,
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
+      subject: String(user._id),
+    }
   );
 };
 
@@ -107,12 +130,61 @@ const buildSchoolPayload = (school) => ({
   _id: school._id,
   name: school.name,
   code: school.schoolCode || "",
+  logo: school.logo || "",
+  portalName: school.portalName || "",
+  primaryColor: school.primaryColor || "#0f766e",
+  accentColor: school.accentColor || "#1d4ed8",
   bankName: school.bankName || "",
   accountName: school.accountName || "",
   accountNumber: school.accountNumber || "",
   paymentInstructions: school.paymentInstructions || "",
   subscription: getSubscriptionSnapshot(school),
 });
+
+const sendAdminLoginCodeNotifications = async ({ admin, school }) => {
+  const notifications = {
+    emailSent: false,
+    smsSent: false,
+    emailPreviewUrl: "",
+    emailDeliveryMode: "",
+  };
+
+  if (!admin || !school?.schoolCode) {
+    return notifications;
+  }
+
+  if (admin.email) {
+    try {
+      const emailResult = await sendSchoolLoginCodeEmail({
+        to: admin.email,
+        adminName: admin.name,
+        schoolName: school.name,
+        schoolCode: school.schoolCode,
+      });
+
+      notifications.emailSent = Boolean(emailResult?.sent);
+      notifications.emailPreviewUrl = emailResult?.previewUrl || "";
+      notifications.emailDeliveryMode = emailResult?.mode || "";
+    } catch (error) {
+      console.error("LOGIN CODE EMAIL ERROR:", error);
+    }
+  }
+
+  if (admin.phoneNumber) {
+    try {
+      const smsResult = await sendSms({
+        to: admin.phoneNumber,
+        body: `EduPro login code for ${school.name}: ${school.schoolCode}. Keep it safe for future sign-ins.`,
+      });
+
+      notifications.smsSent = Boolean(smsResult?.sent);
+    } catch (error) {
+      console.error("LOGIN CODE SMS ERROR:", error);
+    }
+  }
+
+  return notifications;
+};
 
 const buildAuthResponse = (user, school) => {
   const subscription = getSubscriptionSnapshot(school);
@@ -139,15 +211,33 @@ const buildAuthResponse = (user, school) => {
 
 export const register = async (req, res) => {
   try {
-    const { name, email, phoneNumber, password, school: schoolName } = req.body;
-    const trimmedSchoolName = String(schoolName || "").trim();
+    const name = normalizeDisplayName(req.body.name);
+    const email = normalizeEmail(req.body.email);
+    const phoneNumber = normalizePhoneNumber(req.body.phoneNumber);
+    const password = String(req.body.password || "");
+    const trimmedSchoolName = normalizeDisplayName(req.body.school);
 
-    if (!trimmedSchoolName) {
-      return res.status(400).json({ message: "School is required" });
+    if (!name || !trimmedSchoolName || !phoneNumber || !email || !password) {
+      return res.status(400).json({
+        message: "Name, school, email, phone number, and password are required.",
+      });
     }
 
-    if (!phoneNumber) {
-      return res.status(400).json({ message: "Phone number is required" });
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ message: "Enter a valid email address." });
+    }
+
+    if (!hasMinimumPasswordLength(password)) {
+      return res.status(400).json({
+        message: "Password must be at least 6 characters long.",
+      });
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(409).json({
+        message: "This email address is already linked to an existing account.",
+      });
     }
 
     let school = await findSchoolByIdentifier(trimmedSchoolName);
@@ -158,24 +248,47 @@ export const register = async (req, res) => {
       });
     }
 
-    school = await School.create({
+    school = new School({
       name: trimmedSchoolName,
-      schoolCode: await generateUniqueSchoolCode(trimmedSchoolName),
     });
+    school.schoolCode = await generateUniqueSchoolCode(trimmedSchoolName, {
+      seed: school._id.toString(),
+      excludeSchoolId: school._id,
+    });
+    await school.save();
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const admin = await User.create({
       name,
-      email: email.toLowerCase(),
-      phoneNumber: normalizePhoneNumber(phoneNumber),
+      email,
+      phoneNumber,
       password: hashedPassword,
       role: "admin",
       school: school._id,
     });
 
+    const notifications = await sendAdminLoginCodeNotifications({
+      admin,
+      school,
+    });
+    await syncLatestDatabaseBackup({ reason: "school-register" });
+    await createAuditLog({
+      req,
+      action: "auth.register-school",
+      entityType: "school",
+      entityId: school._id,
+      schoolId: school._id,
+      userId: admin._id,
+      role: admin.role,
+      metadata: {
+        schoolName: school.name,
+      },
+    });
+
     res.status(201).json({
       message: "School registered successfully",
+      notifications,
       ...buildAuthResponse(admin, school),
     });
   } catch (error) {
@@ -186,11 +299,16 @@ export const register = async (req, res) => {
 
 export const loginUser = async (req, res) => {
   try {
-    const { email, password, school: schoolIdentifier } = req.body;
-    const normalizedEmail = String(email || "").trim().toLowerCase();
+    const password = String(req.body.password || "");
+    const schoolIdentifier = normalizeDisplayName(req.body.school);
+    const normalizedEmail = normalizeEmail(req.body.email);
 
     if (!normalizedEmail || !password) {
       return res.status(400).json({ message: "Email and password are required" });
+    }
+
+    if (!isValidEmail(normalizedEmail)) {
+      return res.status(400).json({ message: "Enter a valid email address." });
     }
 
     const schoolMatch = await resolveSchoolForLogin({
@@ -199,16 +317,19 @@ export const loginUser = async (req, res) => {
     });
     const school = schoolMatch.school;
 
-    if (!school) {
-      if (schoolMatch.needsSchoolIdentifier) {
-        return res.status(400).json({
-          message:
-            "Enter your school name or login code to sign in to the correct school account.",
-        });
-      }
-
+    if (!school && schoolMatch.needsSchoolIdentifier) {
       return res.status(400).json({
-        message: "School not found. Use the school name or login code linked to this account.",
+        message:
+          "Enter your school name or login code to sign in to the correct school account.",
+      });
+    }
+
+    if (!school) {
+      return res.status(400).json({
+        message:
+          schoolIdentifier
+            ? "School not found. Use the correct school name or login code linked to this account."
+            : "School not found. Enter your school name or login code to continue.",
       });
     }
 
@@ -219,14 +340,16 @@ export const loginUser = async (req, res) => {
 
     if (!user) {
       return res.status(400).json({
-        message: "User not found in this school",
+        message: "Invalid email, password, or school login code.",
       });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
-      return res.status(400).json({ message: "Invalid password" });
+      return res.status(400).json({
+        message: "Invalid email, password, or school login code.",
+      });
     }
 
     const subscription = await syncExpiredSubscription(school);
@@ -240,6 +363,16 @@ export const loginUser = async (req, res) => {
       });
     }
 
+    await createAuditLog({
+      req,
+      action: "auth.login",
+      entityType: "user",
+      entityId: user._id,
+      schoolId: school._id,
+      userId: user._id,
+      role: user.role,
+    });
+
     res.json(buildAuthResponse(user, school));
   } catch (error) {
     console.error(error);
@@ -249,7 +382,27 @@ export const loginUser = async (req, res) => {
 
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, phoneNumber, password, role } = req.body;
+    const name = normalizeDisplayName(req.body.name);
+    const email = normalizeEmail(req.body.email);
+    const phoneNumber = normalizePhoneNumber(req.body.phoneNumber);
+    const password = String(req.body.password || "");
+    const role = String(req.body.role || "").trim().toLowerCase();
+
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({
+        message: "Name, email, password, and role are required.",
+      });
+    }
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ message: "Enter a valid email address." });
+    }
+
+    if (!hasMinimumPasswordLength(password)) {
+      return res.status(400).json({
+        message: "Password must be at least 6 characters long.",
+      });
+    }
 
     const existing = await User.findOne({
       email,
@@ -281,12 +434,18 @@ export const registerUser = async (req, res) => {
 
 export const forgotPassword = async (req, res) => {
   try {
-    const { email, phoneNumber, school } = req.body;
+    const email = normalizeEmail(req.body.email);
+    const phoneNumber = normalizePhoneNumber(req.body.phoneNumber);
+    const school = normalizeDisplayName(req.body.school);
 
     if ((!email && !phoneNumber) || !school) {
       return res.status(400).json({
         message: "School and either an email address or phone number are required",
       });
+    }
+
+    if (email && !isValidEmail(email)) {
+      return res.status(400).json({ message: "Enter a valid email address." });
     }
 
     const schoolDoc = await findSchoolByIdentifier(school);
@@ -309,7 +468,7 @@ export const forgotPassword = async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found in this school" });
 
     const token = crypto.randomBytes(32).toString("hex");
-    user.resetToken = token;
+    user.resetToken = crypto.createHash("sha256").update(token).digest("hex");
     user.resetTokenExpire = Date.now() + 15 * 60 * 1000;
     await user.save();
 
@@ -358,6 +517,20 @@ export const forgotPassword = async (req, res) => {
       });
     }
 
+    await createAuditLog({
+      req,
+      action: "auth.forgot-password",
+      entityType: "user",
+      entityId: user._id,
+      schoolId: schoolDoc._id,
+      userId: user._id,
+      role: user.role,
+      metadata: {
+        emailSent,
+        smsSent,
+      },
+    });
+
     if (emailSent || smsSent) {
       return res.json({
         message:
@@ -384,6 +557,7 @@ export const forgotPassword = async (req, res) => {
       emailDeliveryMode,
       previewUrl: emailPreviewUrl,
     });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: error.message });
@@ -392,18 +566,21 @@ export const forgotPassword = async (req, res) => {
 
 export const resetPassword = async (req, res) => {
   try {
-    const { token, password } = req.body;
+    const token = String(req.body.token || "").trim();
+    const password = String(req.body.password || "");
 
     if (!token || !password) {
       return res.status(400).json({ message: "Token and new password are required" });
     }
 
-    if (password.length < 6) {
+    if (!hasMinimumPasswordLength(password)) {
       return res.status(400).json({ message: "Password must be at least 6 characters" });
     }
 
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
     const user = await User.findOne({
-      resetToken: token,
+      resetToken: hashedToken,
       resetTokenExpire: { $gt: Date.now() },
     });
 
@@ -416,6 +593,15 @@ export const resetPassword = async (req, res) => {
     user.resetTokenExpire = null;
 
     await user.save();
+    await createAuditLog({
+      req,
+      action: "auth.reset-password",
+      entityType: "user",
+      entityId: user._id,
+      schoolId: user.school,
+      userId: user._id,
+      role: user.role,
+    });
 
     res.json({ message: "Password reset successful" });
   } catch (error) {

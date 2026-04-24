@@ -2,16 +2,17 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import API from "../services/api";
 import socket from "@/socket";
+import { useAuthStore } from "@/store/authStore";
 import {
   exportTimetableExcel,
   exportTimetablePdf,
 } from "@/utils/timetableExport";
 
+const auth = useAuthStore();
 const timetable = ref([]);
-const user = JSON.parse(sessionStorage.getItem("user"));
-const school = JSON.parse(sessionStorage.getItem("school") || "null");
+const user = computed(() => auth.user || JSON.parse(sessionStorage.getItem("user") || "null") || {});
+const school = computed(() => auth.school || JSON.parse(sessionStorage.getItem("school") || "null"));
 
-// Days & time slots
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 const times = [
   "08:00am-09:00am",
@@ -44,18 +45,19 @@ const getColor = (name) => {
   return colors[index];
 };
 
-const downloadPdf = () => {
+const downloadPdf = async () => {
   if (!sortedTimetable.value.length) {
     alert("No timetable slots are available to download.");
     return;
   }
 
-  exportTimetablePdf({
+  await exportTimetablePdf({
     slots: sortedTimetable.value,
-    schoolName: school?.name || user?.school || "EduPro School",
-    title: `${user?.role === "teacher" ? "Teacher" : "Student"} Timetable`,
-    subtitle: user?.name ? `Prepared for ${user.name}` : "",
-    fileName: `${(user?.name || "user").replace(/\s+/g, "-").toLowerCase()}-timetable.pdf`,
+    school: school.value,
+    schoolName: school.value?.name || user.value?.school || "EduPro School",
+    title: `${user.value?.role === "teacher" ? "Teacher" : "Student"} Timetable`,
+    subtitle: user.value?.name ? `Prepared for ${user.value.name}` : "",
+    fileName: `${(user.value?.name || "user").replace(/\s+/g, "-").toLowerCase()}-timetable.pdf`,
   });
 };
 
@@ -67,7 +69,7 @@ const downloadExcel = () => {
 
   exportTimetableExcel({
     slots: sortedTimetable.value,
-    fileName: `${(user?.name || "user").replace(/\s+/g, "-").toLowerCase()}-timetable.xlsx`,
+    fileName: `${(user.value?.name || "user").replace(/\s+/g, "-").toLowerCase()}-timetable.xlsx`,
     sheetName: "Timetable",
   });
 };
@@ -98,7 +100,6 @@ onUnmounted(() => {
     </div>
 
     <div class="timetable-container">
-      <!-- Header -->
       <div class="timetable-header">
         <div class="time-cell">Time</div>
         <div v-for="day in days" :key="day" class="day-cell">
@@ -106,12 +107,9 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Body -->
       <div v-for="time in times" :key="time" class="timetable-row">
-        <!-- Time -->
         <div class="time-cell">{{ time }}</div>
 
-        <!-- Days -->
         <div v-for="day in days" :key="day" class="slot-cell">
           <div
             v-if="getSlot(day, time)"
@@ -174,7 +172,6 @@ onUnmounted(() => {
   gap: 10px;
 }
 
-/* GRID */
 .timetable-container {
   overflow-x: auto;
 }
@@ -185,7 +182,6 @@ onUnmounted(() => {
   grid-template-columns: 120px repeat(5, 1fr);
 }
 
-/* CELLS */
 .time-cell {
   padding: 0.75rem;
   font-weight: 600;
@@ -208,7 +204,6 @@ onUnmounted(() => {
   min-height: 70px;
 }
 
-/* SLOT BOX */
 .slot-box {
   height: 100%;
   border-radius: 8px;
@@ -226,7 +221,6 @@ onUnmounted(() => {
   transform: scale(1.03);
 }
 
-/* COLORS */
 .bg-blue { background: #3b82f6; }
 .bg-green { background: #16a34a; }
 .bg-purple { background: #7c3aed; }
@@ -234,14 +228,12 @@ onUnmounted(() => {
 .bg-pink { background: #ec4899; }
 .bg-indigo { background: #6366f1; }
 
-/* EMPTY */
 .empty-slot {
   text-align: center;
   color: #9ca3af;
   margin-top: 15px;
 }
 
-/* RESPONSIVE */
 @media (max-width: 768px) {
   .section-head {
     flex-direction: column;
