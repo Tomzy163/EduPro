@@ -2,6 +2,7 @@ import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { env } from "../config/env.js";
 import School from "../models/School.js";
 import Payment from "../models/Payment.js";
 import { SUBSCRIPTION_PLANS, getSubscriptionSnapshot } from "../utils/subscription.js";
@@ -26,6 +27,10 @@ import {
   activateSubscriptionFromPayment,
   isValidSubscriptionPlan,
 } from "../utils/subscriptionActivation.js";
+import {
+  applyPrivilegedPlatinumAccess,
+  initializeSchoolSubscriptionState,
+} from "../utils/subscriptionAccess.js";
 import { syncLatestDatabaseBackup } from "../utils/databaseBackup.js";
 import {
   hasMinimumPasswordLength,
@@ -37,17 +42,12 @@ import {
 } from "../utils/validation.js";
 import { createAuditLog } from "../utils/auditLogger.js";
 
-const SUBSCRIPTION_CURRENCY = process.env.PAYSTACK_CURRENCY || "NGN";
+const SUBSCRIPTION_CURRENCY = env.paystackCurrency;
 const PAYSTACK_SUCCESS_STATUSES = new Set(["success", "successful"]);
-const isPaystackConfigured = () => Boolean(process.env.PAYSTACK_SECRET_KEY);
-const JWT_ISSUER = process.env.JWT_ISSUER || "edupro-api";
-const JWT_AUDIENCE = process.env.JWT_AUDIENCE || "edupro-web";
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
-
-const resolveServerBaseUrl = () =>
-  (process.env.SERVER_URL ||
-    process.env.API_BASE_URL ||
-    `http://localhost:${process.env.PORT || 5000}`).replace(/\/+$/, "");
+const isPaystackConfigured = () => Boolean(env.paystackSecretKey);
+const JWT_ISSUER = env.jwtIssuer;
+const JWT_AUDIENCE = env.jwtAudience;
+const JWT_EXPIRES_IN = env.jwtExpiresIn;
 
 const normalizePlan = (value = "") => normalizePlanValue(value);
 
@@ -116,7 +116,7 @@ const generateToken = (user) => {
       school: user.school,
       schoolId: user.school,
     },
-    process.env.JWT_SECRET,
+    env.jwtSecret,
     {
       expiresIn: JWT_EXPIRES_IN,
       issuer: JWT_ISSUER,
@@ -267,6 +267,7 @@ export const register = async (req, res) => {
       role: "admin",
       school: school._id,
     });
+    await initializeSchoolSubscriptionState({ school, admin });
 
     const notifications = await sendAdminLoginCodeNotifications({
       admin,
@@ -352,6 +353,7 @@ export const loginUser = async (req, res) => {
       });
     }
 
+    await applyPrivilegedPlatinumAccess({ school, user });
     const subscription = await syncExpiredSubscription(school);
 
     if (!subscription.hasAppAccess && user.role !== "admin") {
@@ -472,7 +474,7 @@ export const forgotPassword = async (req, res) => {
     user.resetTokenExpire = Date.now() + 15 * 60 * 1000;
     await user.save();
 
-    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+    const clientUrl = env.clientUrl || "http://localhost:5173";
     const resetLink = `${clientUrl}/reset-password?token=${encodeURIComponent(token)}`;
 
     let emailSent = false;
@@ -672,8 +674,7 @@ export const subscribeSchool = async (req, res) => {
     const reference = generatePaystackReference(plan);
     const amount = Number(SUBSCRIPTION_PLANS[plan]?.price || 0);
     const callbackUrl =
-      process.env.PAYSTACK_CALLBACK_URL ||
-      `${process.env.CLIENT_URL || "http://localhost:5173"}/subscription`;
+      env.paystackCallbackUrl || `${env.clientUrl || "http://localhost:5173"}/subscription`;
     const metadata = {
       userId: req.user._id.toString(),
       schoolId: school._id.toString(),

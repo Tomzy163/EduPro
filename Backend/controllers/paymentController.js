@@ -9,6 +9,9 @@ const buildReceiptNumber = () =>
     1000 + Math.random() * 9000
   )}`;
 
+const buildManualPaymentReference = () =>
+  `manual-${Date.now()}-${Math.floor(100000 + Math.random() * 900000)}`;
+
 const populatePayment = (query) =>
   query
     .populate("user", "name email phoneNumber role")
@@ -64,12 +67,15 @@ export const createPayment = async (req, res) => {
       return res.status(403).json({ message: "You can only link payments to your own children." });
     }
 
+    const receiptNumber = buildReceiptNumber();
+
     const payment = await Payment.create({
       user: req.user._id,
       student: paymentStudent?._id || null,
       amount,
       receipt: req.file.path.replace(/\\/g, "/"),
-      receiptNumber: buildReceiptNumber(),
+      receiptNumber,
+      reference: buildManualPaymentReference(),
       school: req.user.school._id,
       schoolNameSnapshot: req.user.school.name || "",
       schoolCodeSnapshot: req.user.school.schoolCode || "",

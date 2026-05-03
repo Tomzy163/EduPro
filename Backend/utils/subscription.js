@@ -1,3 +1,5 @@
+import { env } from "../config/env.js";
+
 export const SUBSCRIPTION_PLANS = {
   trial: {
     name: "Free Trial",
@@ -187,8 +189,8 @@ export const getSubscriptionSnapshot = (school) => {
       })),
     paymentDetails: {
       provider: "Paystack",
-      currency: process.env.PAYSTACK_CURRENCY || "NGN",
-      paystackEnabled: Boolean(process.env.PAYSTACK_SECRET_KEY),
+      currency: env.paystackCurrency,
+      paystackEnabled: Boolean(env.paystackSecretKey),
       note:
         process.env.SUBSCRIPTION_PAYMENT_NOTE ||
         "Payments are processed securely by Paystack and activated automatically by webhook.",

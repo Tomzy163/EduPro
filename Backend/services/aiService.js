@@ -1,8 +1,9 @@
+import { env } from "../config/env.js";
 import { truncateContext } from "../validators/aiValidators.js";
 
-const OPENAI_API_URL = process.env.OPENAI_API_URL || "https://api.openai.com/v1/responses";
-const OPENAI_TIMEOUT_MS = Number(process.env.OPENAI_TIMEOUT_MS || 30000);
-const DEFAULT_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
+const OPENAI_API_URL = env.openAiApiUrl;
+const OPENAI_TIMEOUT_MS = env.openAiTimeoutMs;
+const DEFAULT_MODEL = env.openAiModel;
 
 const isPlainObject = (value) =>
   value && typeof value === "object" && !Array.isArray(value);
@@ -53,10 +54,10 @@ const parseApiError = async (response) => {
 
 const buildHeaders = () => ({
   "Content-Type": "application/json",
-  Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+  Authorization: `Bearer ${env.openAiApiKey}`,
 });
 
-export const isOpenAiConfigured = () => Boolean(process.env.OPENAI_API_KEY);
+export const isOpenAiConfigured = () => Boolean(env.openAiApiKey);
 
 export const getDefaultAiModel = () => DEFAULT_MODEL;
 

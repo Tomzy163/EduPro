@@ -52,39 +52,30 @@ export const uploadResult = async (req, res) => {
       return res.status(403).json({ message: "Not your course" });
     }
 
-    const result = await Result.findOneAndUpdate(
-      {
-        student: studentRecord._id,
-        course,
-        school: schoolId,
-      },
-      {
-        $set: {
-          student: studentRecord._id,
-          course,
-          score: normalizedScore,
-          grade: normalizedGrade,
-          uploadedBy: req.user._id,
-          school: schoolId,
-        },
-      },
-      {
-        upsert: true,
-        new: true,
-        setDefaultsOnInsert: true,
-      }
-    );
+    const result = await Result.create({
+      student: studentRecord._id,
+      course,
+      score: normalizedScore,
+      grade: normalizedGrade,
+      uploadedBy: req.user._id,
+      school: schoolId,
+    });
 
     req.app.get("io")?.emit("resultUpdated");
 
-    res.json(result);
+    const populatedResult = await Result.findById(result._id)
+      .populate("student", "name")
+      .populate("course", "name teacher")
+      .populate("uploadedBy", "name");
+
+    res.status(201).json(populatedResult);
 
     await emitAcademicUpdate({
       schoolId,
       studentIds: [studentRecord._id],
       entity: "result",
-      action: "updated",
-      message: "Teacher saved a result.",
+      action: "created",
+      message: "Teacher saved a new result entry.",
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -174,6 +165,60 @@ export const deleteResult = async (req, res) => {
   }
 };
 
+export const deleteResults = async (req, res) => {
+  try {
+    const resultIds = Array.isArray(req.body?.resultIds)
+      ? [...new Set(req.body.resultIds.map((id) => String(id || "").trim()).filter(Boolean))]
+      : [];
+
+    if (resultIds.length === 0) {
+      return res.status(400).json({ message: "Select at least one result entry to delete." });
+    }
+
+    const query = {
+      _id: { $in: resultIds },
+      school: req.user.school._id,
+    };
+
+    if (req.user.role === "teacher") {
+      const teacherCourses = await Course.find({
+        school: req.user.school._id,
+        teacher: req.user._id,
+      }).select("_id");
+
+      query.course = { $in: teacherCourses.map((course) => course._id) };
+    }
+
+    const matchingResults = await Result.find(query).select("student");
+
+    if (matchingResults.length === 0) {
+      return res.status(404).json({ message: "No matching result entries were found." });
+    }
+
+    await Result.deleteMany({
+      _id: { $in: matchingResults.map((result) => result._id) },
+      school: req.user.school._id,
+    });
+
+    req.app.get("io")?.emit("resultUpdated");
+
+    res.json({
+      message: `${matchingResults.length} result entr${matchingResults.length === 1 ? "y" : "ies"} deleted successfully.`,
+      deletedCount: matchingResults.length,
+    });
+
+    await emitAcademicUpdate({
+      schoolId: req.user.school._id,
+      studentIds: [...new Set(matchingResults.map((result) => String(result.student)))],
+      entity: "result",
+      action: "deleted",
+      message: "Teacher deleted multiple result entries.",
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export const getTeacherResults = async (req, res) => {
   try {
     const query = { school: req.user.school._id };
@@ -189,7 +234,9 @@ export const getTeacherResults = async (req, res) => {
 
     const results = await Result.find(query)
       .populate("student", "name")
-      .populate("course", "name teacher");
+      .populate("course", "name teacher")
+      .populate("uploadedBy", "name")
+      .sort({ createdAt: -1 });
 
     res.json(results);
   } catch (error) {
@@ -226,7 +273,8 @@ export const getStudentResults = async (req, res) => {
       school: schoolId,
     })
       .populate("course", "name term")
-      .populate("uploadedBy", "name");
+      .populate("uploadedBy", "name")
+      .sort({ createdAt: -1 });
 
     res.json(results);
   } catch (error) {

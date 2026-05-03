@@ -43,12 +43,11 @@ const loadInsights = async () => {
 };
 
 onMounted(async () => {
-  try {
-    await loadUsage();
-    await loadInsights();
-  } catch (error) {
-    statusMessage.value = error.response?.data?.message || "Unable to load AI insights.";
-  }
+  await loadUsage().catch((error) => {
+    statusMessage.value = error.response?.data?.message || "Unable to load AI usage details.";
+  });
+
+  await loadInsights();
 });
 </script>
 

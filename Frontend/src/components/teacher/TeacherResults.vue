@@ -7,6 +7,7 @@ import {
   getTeacherResults,
   updateResult,
   deleteResult,
+  deleteResults,
 } from "@/services/resultService";
 import { addSchoolBranding } from "@/utils/pdfBranding";
 import { useAuthStore } from "@/store/authStore";
@@ -19,6 +20,7 @@ const editScore = ref("");
 const editGrade = ref("");
 const search = ref("");
 const courseFilter = ref("");
+const deletingMany = ref(false);
 
 const school = computed(() => auth.school || {});
 
@@ -41,6 +43,8 @@ const filteredResults = computed(() =>
   })
 );
 
+const visibleResultIds = computed(() => filteredResults.value.map((result) => result._id));
+
 const startEdit = (result) => {
   editId.value = result._id;
   editScore.value = result.score;
@@ -61,6 +65,27 @@ const remove = async (id) => {
   if (!confirm("Delete result?")) return;
   await deleteResult(id);
   await fetchResults();
+};
+
+const removeFiltered = async () => {
+  if (visibleResultIds.value.length === 0) {
+    alert("There are no visible result entries to delete.");
+    return;
+  }
+
+  if (!confirm(`Delete ${visibleResultIds.value.length} visible result entr${visibleResultIds.value.length === 1 ? "y" : "ies"}?`)) {
+    return;
+  }
+
+  deletingMany.value = true;
+
+  try {
+    await deleteResults(visibleResultIds.value);
+    editId.value = null;
+    await fetchResults();
+  } finally {
+    deletingMany.value = false;
+  }
 };
 
 const downloadSingleResult = async (result) => {
@@ -162,6 +187,13 @@ onUnmounted(() => {
         <button @click="downloadGroupedResultsExcel" class="btn btn-primary">
           Export Group Excel
         </button>
+        <button
+          @click="removeFiltered"
+          class="btn btn-danger"
+          :disabled="deletingMany || filteredResults.length === 0"
+        >
+          {{ deletingMany ? "Deleting..." : "Delete Visible" }}
+        </button>
         <button @click="downloadGroupedResultsPdf" class="btn btn-success">
           Export Group PDF
         </button>
@@ -190,6 +222,7 @@ onUnmounted(() => {
             <th>Course</th>
             <th>Score</th>
             <th>Grade</th>
+            <th>Date</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -208,6 +241,8 @@ onUnmounted(() => {
               <input v-model="editGrade" class="input" />
             </td>
             <td v-else>{{ result.grade }}</td>
+
+            <td>{{ new Date(result.createdAt).toLocaleDateString() }}</td>
 
             <td class="actions-cell">
               <button

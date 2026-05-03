@@ -23,21 +23,15 @@ const handleRegister = async () => {
   try {
     error.value = "";
     success.value = "";
-    
-//     if (!schoolName.value) {
-//   error.value = "School name is required";
-//   return;
-// }
-
     if (!name.value || !email.value || !phoneNumber.value || !password.value || !schoolName.value) {
       error.value = "All fields are required";
       return;
     }
 
     if (password.value.length < 6) {
-  error.value = "Password must be at least 6 characters";
-  return;
-}
+      error.value = "Password must be at least 6 characters";
+      return;
+    }
 
     if (password.value !== confirmPassword.value) {
       error.value = "Passwords do not match";
@@ -46,18 +40,16 @@ const handleRegister = async () => {
 
     loading.value = true;
     error.value = "";
-    if (!schoolName.value) return alert("Enter school name");
-
     const res = await register({
       name: name.value,
       email: email.value,
       phoneNumber: phoneNumber.value,
       password: password.value,
       school: schoolName.value, // ✅ send school
-      role: "admin", // For first admin
+      role: "admin",
     });
 
-    success.value = "Admin account created successfully 🎉";
+    success.value = "Admin account created successfully.";
 
     try {
       localStorage.setItem(
@@ -69,11 +61,11 @@ const handleRegister = async () => {
     }
 
     success.value = res?.school?.code
-      ? `Admin account created successfully. Login code: ${res.school.code}${
+      ? `Admin account created successfully. Login code: ${res.school.code}.${
           res?.notifications?.emailPreviewUrl
             ? " Email preview generated for this device."
             : ""
-        }`
+        }${res?.subscription?.limitedAccess ? " Sign in and choose a subscription plan to activate the school." : ""}`
       : success.value;
 
     setTimeout(() => router.push("/"), 1500);

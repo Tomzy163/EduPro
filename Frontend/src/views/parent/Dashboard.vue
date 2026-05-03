@@ -128,7 +128,21 @@ const getResults = async () => {
 };
 
 const refreshDashboard = async () => {
-  await Promise.all([fetchSchool(), fetchChildren(), fetchPayments(), fetchTimetable()]);
+  const tasks = await Promise.allSettled([
+    fetchSchool(),
+    fetchChildren(),
+    fetchPayments(),
+    fetchTimetable(),
+  ]);
+
+  const failedTask = tasks.find((task) => task.status === "rejected");
+
+  if (failedTask?.reason) {
+    showStatus(
+      failedTask.reason?.response?.data?.message || "Some parent dashboard data could not be loaded.",
+      "danger"
+    );
+  }
 
   if (selectedChild.value) {
     await getResults();

@@ -169,11 +169,18 @@ watch(selectedStudentId, () => {
 });
 
 onMounted(async () => {
-  try {
-    await Promise.all([loadStudents(), loadUsage()]);
-    await loadStudentContext();
-  } catch (error) {
-    statusMessage.value = error.response?.data?.message || "Unable to load report comment tools.";
+  const tasks = await Promise.allSettled([loadStudents(), loadUsage()]);
+  const failedTask = tasks.find((task) => task.status === "rejected");
+
+  if (selectedStudentId.value) {
+    await loadStudentContext().catch(() => {
+      statusMessage.value = "Unable to load the selected student's academic records.";
+    });
+  }
+
+  if (failedTask?.reason) {
+    statusMessage.value =
+      failedTask.reason?.response?.data?.message || "Unable to load report comment tools.";
   }
 });
 </script>

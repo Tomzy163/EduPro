@@ -1,10 +1,7 @@
+import { env } from "../config/env.js";
+
 const buildAllowedOrigins = () => {
-  const configuredOrigins = String(
-    process.env.CLIENT_URL || "http://localhost:5173"
-  )
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
+  const configuredOrigins = env.corsOrigins.length > 0 ? env.corsOrigins : [env.clientUrl];
 
   const expandedOrigins = new Set(configuredOrigins);
 

@@ -19,14 +19,43 @@ import {
 const router = express.Router();
 
 router.use(protect, requireSchoolAccess);
-router.use(requirePlanFeature("high_volume_operations"));
 
-router.post("/link", authorize("admin"), linkParentToStudent);
+router.post(
+  "/link",
+  authorize("admin"),
+  requirePlanFeature("high_volume_operations"),
+  linkParentToStudent
+);
 router.get("/parent/:id", authorize("admin", "parent"), getParentWithChildren);
-router.get("/student/:id", authorize("admin"), getStudentWithParents);
-router.get("/history", authorize("admin"), getLinkHistory);
-router.delete("/:id", authorize("admin"), deleteLink);
-router.put("/:id", authorize("admin"), updateLink);
-router.delete("/", authorize("admin"), deleteAllLinks);
+router.get(
+  "/student/:id",
+  authorize("admin"),
+  requirePlanFeature("high_volume_operations"),
+  getStudentWithParents
+);
+router.get(
+  "/history",
+  authorize("admin"),
+  requirePlanFeature("high_volume_operations"),
+  getLinkHistory
+);
+router.delete(
+  "/:id",
+  authorize("admin"),
+  requirePlanFeature("high_volume_operations"),
+  deleteLink
+);
+router.put(
+  "/:id",
+  authorize("admin"),
+  requirePlanFeature("high_volume_operations"),
+  updateLink
+);
+router.delete(
+  "/",
+  authorize("admin"),
+  requirePlanFeature("high_volume_operations"),
+  deleteAllLinks
+);
 
 export default router;

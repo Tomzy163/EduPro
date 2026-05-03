@@ -73,6 +73,7 @@ const submitResult = async () => {
 
     score.value = "";
     grade.value = "";
+    alert("Result entry saved successfully.");
   } catch (error) {
     alert(error.response?.data?.message || "Failed to upload result.");
   } finally {
@@ -93,6 +94,9 @@ onUnmounted(() => {
 <template>
   <section class="card selector-card">
     <h2 class="section-title">Upload Result</h2>
+    <p class="section-copy">
+      Each upload creates a new result entry, so you can record repeated assessments for the same subject.
+    </p>
 
     <p v-if="courses.length === 0" class="empty">
       No course has been assigned to this teacher yet.

@@ -1,17 +1,18 @@
 import jwt from "jsonwebtoken";
+import { env } from "../config/env.js";
 import User from "../models/User.js";
 
-const JWT_ISSUER = process.env.JWT_ISSUER || "edupro-api";
-const JWT_AUDIENCE = process.env.JWT_AUDIENCE || "edupro-web";
+const JWT_ISSUER = env.jwtIssuer;
+const JWT_AUDIENCE = env.jwtAudience;
 
 const verifyAccessToken = (token) => {
   try {
-    return jwt.verify(token, process.env.JWT_SECRET, {
+    return jwt.verify(token, env.jwtSecret, {
       issuer: JWT_ISSUER,
       audience: JWT_AUDIENCE,
     });
   } catch {
-    return jwt.verify(token, process.env.JWT_SECRET);
+    return jwt.verify(token, env.jwtSecret);
   }
 };
 

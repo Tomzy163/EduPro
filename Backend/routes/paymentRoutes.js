@@ -33,6 +33,5 @@ router.put("/:id", authorize("admin"), requirePlanFeature("high_volume_operation
 router.delete("/:id", authorize("admin"), requirePlanFeature("high_volume_operations"), deletePayment);
 router.delete("/", authorize("admin"), requirePlanFeature("high_volume_operations"), clearPayments);
 router.get("/users", authorize("admin"), requirePlanFeature("high_volume_operations"), getUsers);
-router.get("/payments", authorize("admin"), requirePlanFeature("high_volume_operations"), getPayments);
 
 export default router;

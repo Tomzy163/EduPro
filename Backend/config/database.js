@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { env } from "./env.js";
 import {
   createDatabaseBackup,
   getDatabaseConnectionSummary,
@@ -6,6 +7,7 @@ import {
   startDatabaseBackupInterval,
 } from "../utils/databaseBackup.js";
 import { ensureSchoolIdentityBackfill } from "../utils/schoolDirectory.js";
+import { syncComplimentarySubscriptionOverrides } from "../utils/subscriptionAccess.js";
 
 let connectionEventsRegistered = false;
 
@@ -30,13 +32,13 @@ const registerConnectionEvents = () => {
 };
 
 const connectDatabase = async () => {
-  if (!process.env.MONGO_URI) {
+  if (!env.mongoUri) {
     throw new Error("MONGO_URI is not defined in .env");
   }
 
   registerConnectionEvents();
 
-  await mongoose.connect(process.env.MONGO_URI, {
+  await mongoose.connect(env.mongoUri, {
     serverSelectionTimeoutMS: 10000,
   });
 
@@ -50,6 +52,13 @@ const connectDatabase = async () => {
   const backfilledSchools = await ensureSchoolIdentityBackfill();
   if (backfilledSchools > 0) {
     console.log(`Backfilled identity data for ${backfilledSchools} school record(s).`);
+  }
+
+  const complimentaryOverrides = await syncComplimentarySubscriptionOverrides();
+  if (complimentaryOverrides > 0) {
+    console.log(
+      `Applied complimentary Platinum access to ${complimentaryOverrides} qualifying school account(s).`
+    );
   }
 
   const connectionSummary = await getDatabaseConnectionSummary();

@@ -1,9 +1,16 @@
 Backend/.env
+Backend/.env.*
 Backend/node_modules/
 Backend/uploads/
 Backend/backups/
+Backend/.codex-temp/
+Backend/smoke-server*.log
 Frontend/node_modules/
 Frontend/dist/
 Frontend/.vite/
+Frontend/.env
+Frontend/.env.*
 uploads/
+.codex-temp/
+*.tsbuildinfo
 *.log

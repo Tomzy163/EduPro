@@ -27,24 +27,42 @@ const auth = useAuthStore();
 const subscription = computed(
   () => auth.school?.subscription || auth.user?.subscription || null
 );
-const allowed = computed(() => hasPlanFeature(subscription.value, props.feature));
+const limitedAccess = computed(
+  () => subscription.value?.limitedAccess === true || subscription.value?.hasAppAccess === false
+);
+const allowed = computed(
+  () => !limitedAccess.value && hasPlanFeature(subscription.value, props.feature)
+);
 const title = computed(() => props.title || FEATURE_LABELS[props.feature] || "Feature");
 const copy = computed(
   () =>
     props.copy ||
     `${title.value} is available on the ${FEATURE_REQUIRED_PLAN[props.feature] || "required plan"} and above.`
 );
+const lockedCopy = computed(() => {
+  if (!limitedAccess.value) {
+    return copy.value;
+  }
+
+  return auth.user?.role === "admin"
+    ? "Your school subscription needs to be activated or renewed before this feature can be used."
+    : "This feature is currently unavailable because the school's subscription needs attention. Contact your school admin.";
+});
 </script>
 
 <template>
   <slot v-if="allowed" />
 
   <section v-else class="feature-locked card">
-    <span class="locked-pill">Plan Locked</span>
+    <span class="locked-pill">{{ limitedAccess ? "Access Paused" : "Plan Locked" }}</span>
     <h2 class="section-title">{{ title }}</h2>
-    <p class="section-copy">{{ copy }}</p>
-    <router-link to="/subscription" class="btn btn-primary">
-      Upgrade Plan
+    <p class="section-copy">{{ lockedCopy }}</p>
+    <router-link
+      v-if="auth.user?.role === 'admin'"
+      to="/subscription"
+      class="btn btn-primary"
+    >
+      {{ limitedAccess ? "Manage Subscription" : "Upgrade Plan" }}
     </router-link>
   </section>
 </template>

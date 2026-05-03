@@ -24,3 +24,10 @@ export const deleteResult = async (id) => {
   const res = await API.delete(`/results/${id}`);
   return res.data;
 };
+
+export const deleteResults = async (resultIds) => {
+  const res = await API.delete("/results/bulk-delete", {
+    data: { resultIds },
+  });
+  return res.data;
+};

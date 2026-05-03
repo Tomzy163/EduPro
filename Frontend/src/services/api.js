@@ -1,5 +1,11 @@
 import axios from "axios";
 import { apiBaseUrl } from "./runtimeConfig";
+import {
+  clearStoredSession,
+  getStoredSchool,
+  getStoredUser,
+  syncStoredSubscription,
+} from "../utils/session";
 
 const API = axios.create({
   baseURL: apiBaseUrl,
@@ -7,18 +13,10 @@ const API = axios.create({
 
 API.interceptors.request.use((config) => {
   const token = sessionStorage.getItem("token");
-  const rawSchool = sessionStorage.getItem("school");
-  const rawUser = sessionStorage.getItem("user");
-
   let schoolId = "";
-
-  try {
-    const school = rawSchool ? JSON.parse(rawSchool) : null;
-    const user = rawUser ? JSON.parse(rawUser) : null;
-    schoolId = school?._id || user?.schoolId || "";
-  } catch {
-    schoolId = "";
-  }
+  const school = getStoredSchool();
+  const user = getStoredUser();
+  schoolId = school?._id || user?.schoolId || "";
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -35,56 +33,24 @@ API.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      sessionStorage.removeItem("user");
-      sessionStorage.removeItem("school");
-      sessionStorage.removeItem("token");
+      clearStoredSession();
 
       if (window.location.pathname !== "/") {
         window.location.assign("/");
       }
     }
 
-    if (error.response?.status === 402 && error.response?.data?.code === "SUBSCRIPTION_REQUIRED") {
-      try {
-        const rawUser = sessionStorage.getItem("user");
-        const rawSchool = sessionStorage.getItem("school");
-        const user = rawUser ? JSON.parse(rawUser) : null;
-        const school = rawSchool ? JSON.parse(rawSchool) : null;
-        const subscription = error.response.data.subscription;
+    const responseCode = error.response?.data?.code;
+    const subscription = error.response?.data?.subscription;
+    const user = getStoredUser();
 
-        if (user?.role === "admin") {
-          sessionStorage.setItem(
-            "user",
-            JSON.stringify({
-              ...user,
-              subscription,
-            })
-          );
+    if (subscription) {
+      syncStoredSubscription(subscription);
+    }
 
-          if (school) {
-            sessionStorage.setItem(
-              "school",
-              JSON.stringify({
-                ...school,
-                subscription,
-              })
-            );
-          }
-
-          if (window.location.pathname !== "/subscription") {
-            window.location.assign("/subscription");
-          }
-        } else {
-          sessionStorage.removeItem("user");
-          sessionStorage.removeItem("school");
-          sessionStorage.removeItem("token");
-
-          if (window.location.pathname !== "/") {
-            window.location.assign("/");
-          }
-        }
-      } catch {
-        // Ignore session parsing issues and surface the API error below.
+    if (error.response?.status === 402 && responseCode === "SUBSCRIPTION_REQUIRED") {
+      if (user?.role === "admin" && window.location.pathname !== "/subscription") {
+        window.location.assign("/subscription");
       }
     }
 

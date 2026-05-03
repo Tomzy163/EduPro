@@ -93,6 +93,14 @@ export const FEATURE_REQUIRED_PLAN = {
 };
 
 export const getPlanFeatures = (subscription = null) => {
+  if (
+    !subscription ||
+    subscription.limitedAccess === true ||
+    subscription.hasAppAccess === false
+  ) {
+    return [];
+  }
+
   if (Array.isArray(subscription?.features) && subscription.features.length > 0) {
     return subscription.features;
   }

@@ -1,4 +1,9 @@
 import { createRouter, createWebHistory } from "vue-router";
+import { hasPlanFeature } from "../utils/planAccess";
+import {
+  getStoredSchool,
+  getStoredUser,
+} from "../utils/session";
 
 const Login = () => import("../views/Login.vue");
 const Register = () => import("../views/Register.vue");
@@ -40,12 +45,22 @@ const routes = [
       {
         path: "admin/ai-insights",
         component: AdminAIInsights,
-        meta: { requiresAuth: true, role: "admin", title: "AI Admin Analytics" },
+        meta: {
+          requiresAuth: true,
+          role: "admin",
+          feature: "ai_admin_analytics",
+          title: "AI Admin Analytics",
+        },
       },
       {
         path: "admin/report-comments",
         component: ReportCommentsView,
-        meta: { requiresAuth: true, role: "admin", title: "Report Comments" },
+        meta: {
+          requiresAuth: true,
+          role: "admin",
+          feature: "ai_report_comments",
+          title: "Report Comments",
+        },
       },
       {
         path: "teacher",
@@ -55,12 +70,22 @@ const routes = [
       {
         path: "teacher/exam-generator",
         component: TeacherExamGenerator,
-        meta: { requiresAuth: true, role: "teacher", title: "Exam Generator" },
+        meta: {
+          requiresAuth: true,
+          role: "teacher",
+          feature: "ai_exam_generator",
+          title: "Exam Generator",
+        },
       },
       {
         path: "teacher/report-comments",
         component: ReportCommentsView,
-        meta: { requiresAuth: true, role: "teacher", title: "Report Comments" },
+        meta: {
+          requiresAuth: true,
+          role: "teacher",
+          feature: "ai_report_comments",
+          title: "Report Comments",
+        },
       },
       {
         path: "student",
@@ -70,7 +95,12 @@ const routes = [
       {
         path: "student/ai-tutor",
         component: StudentAITutor,
-        meta: { requiresAuth: true, role: "student", title: "AI Tutor" },
+        meta: {
+          requiresAuth: true,
+          role: "student",
+          feature: "ai_student_tutor",
+          title: "AI Tutor",
+        },
       },
       {
         path: "parent",
@@ -80,7 +110,12 @@ const routes = [
       {
         path: "parent/ai-assistant",
         component: ParentAIAssistant,
-        meta: { requiresAuth: true, role: "parent", title: "Parent Assistant" },
+        meta: {
+          requiresAuth: true,
+          role: "parent",
+          feature: "ai_parent_assistant",
+          title: "Parent Assistant",
+        },
       },
     ],
   },
@@ -91,30 +126,6 @@ const router = createRouter({
   history: createWebHistory(),
   routes,
 });
-
-const getSafeStoredUser = () => {
-  try {
-    const rawUser = sessionStorage.getItem("user");
-    return rawUser ? JSON.parse(rawUser) : null;
-  } catch {
-    return null;
-  }
-};
-
-const getSafeStoredSchool = () => {
-  try {
-    const rawSchool = sessionStorage.getItem("school");
-    return rawSchool ? JSON.parse(rawSchool) : null;
-  } catch {
-    return null;
-  }
-};
-
-const clearStoredSession = () => {
-  sessionStorage.removeItem("user");
-  sessionStorage.removeItem("school");
-  sessionStorage.removeItem("token");
-};
 
 const getDashboardRouteForRole = (role) => {
   switch (role) {
@@ -132,8 +143,8 @@ const getDashboardRouteForRole = (role) => {
 };
 
 router.beforeEach((to, _from, next) => {
-  const user = getSafeStoredUser();
-  const school = getSafeStoredSchool();
+  const user = getStoredUser();
+  const school = getStoredSchool();
   const token = sessionStorage.getItem("token");
 
   if (to.meta.requiresAuth && (!token || !user)) {
@@ -153,9 +164,18 @@ router.beforeEach((to, _from, next) => {
       if (to.path !== "/subscription") {
         return next("/subscription");
       }
-    } else {
-      clearStoredSession();
-      return next("/");
+    }
+  }
+
+  if (to.meta.feature) {
+    const subscription = school?.subscription || user?.subscription || null;
+
+    if (!hasPlanFeature(subscription, to.meta.feature)) {
+      if (user?.role === "admin" && limitedAccess) {
+        return next("/subscription");
+      }
+
+      return next(getDashboardRouteForRole(user?.role));
     }
   }
 

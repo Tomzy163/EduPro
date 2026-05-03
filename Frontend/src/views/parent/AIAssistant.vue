@@ -82,10 +82,12 @@ const copyAnswer = async () => {
 };
 
 onMounted(async () => {
-  try {
-    await Promise.all([loadChildren(), loadUsage()]);
-  } catch (error) {
-    statusMessage.value = error.response?.data?.message || "Unable to load the AI assistant.";
+  const tasks = await Promise.allSettled([loadChildren(), loadUsage()]);
+  const failedTask = tasks.find((task) => task.status === "rejected");
+
+  if (failedTask?.reason) {
+    statusMessage.value =
+      failedTask.reason?.response?.data?.message || "Unable to load the AI assistant.";
   }
 });
 </script>

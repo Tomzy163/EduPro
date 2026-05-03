@@ -1,10 +1,10 @@
 import express from "express";
-import dotenv from "dotenv";
 import cors from "cors";
 import helmet from "helmet";
 import http from "http";
 import { Server } from "socket.io";
 import connectDatabase from "./config/database.js";
+import { env, validateEnv } from "./config/env.js";
 import authRoutes from "./routes/authRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
@@ -32,10 +32,12 @@ import {
   unregisterSocketUser,
 } from "./utils/socketState.js";
 
-dotenv.config();
+const envValidation = validateEnv();
+envValidation.warnings.forEach((warning) => {
+  console.log(`ENV WARNING: ${warning}`);
+});
 
 const app = express();
-const clientOrigin = process.env.CLIENT_URL || "http://localhost:5173";
 const globalRateLimiter = createRateLimiter({
   keyPrefix: "global-api",
   windowMs: 15 * 60 * 1000,
@@ -152,7 +154,7 @@ app.get("/", (_req, res) => {
   res.send("API is running...");
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = env.port;
 let shutdownInProgress = false;
 
 server.on("error", (error) => {
