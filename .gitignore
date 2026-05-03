@@ -1,5 +1,6 @@
 Backend/.env
 Backend/.env.*
+!Backend/.env.example
 Backend/node_modules/
 Backend/uploads/
 Backend/backups/
@@ -10,6 +11,7 @@ Frontend/dist/
 Frontend/.vite/
 Frontend/.env
 Frontend/.env.*
+!Frontend/.env.example
 uploads/
 .codex-temp/
 *.tsbuildinfo
